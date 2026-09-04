@@ -279,13 +279,52 @@ Checked against JUCE 8.0.12 sources and the local toolchain:
 - **Audio:** WASAPI over the Axia WDM devices (§4). No ASIO SDK needed.
 - **No terminal on the work PC:** About shows OS name and build number, so
   the exact Windows release is read from inside the app on first run.
-- **Deployment:** copy the exe, plus presets and audio as files. No
-  installer. The repo will live on the owner's git remote (D11), which is
-  also how the exe reaches the work PC; build output stays out of the repo.
+- **Deployment:** `FlowerMachineSetup.exe` (§7.1). The repo lives on the
+  owner's git remote (D11), which is also how the exe reaches the work PC;
+  build output stays out of the repo.
 - Verification on the work PC happens whenever access is available; it does
   not block development. Checklist: window paints (both renderers), Axia
   outputs listed, test tone on the right output, a WAV and an MP3 cart play,
   About shows the build number.
+
+### 7.1 The installer (`Installer/`, added 2026-09-04)
+
+One self-contained `FlowerMachineSetup.exe` that carries the built
+`FlowerMachine.exe` inside it, wearing a 1990s cracktro while it works.
+
+- **Per-user, never elevated.** Everything lands in
+  `%LOCALAPPDATA%\Programs\FlowerMachine` and `HKEY_CURRENT_USER`, so it
+  installs on a station PC where the operator has no administrator rights.
+  Local, not roaming: a 7 MB image in roaming AppData would be dragged
+  through profile sync. Elevating would also repoint `%LOCALAPPDATA%` at the
+  administrator's profile, so the manifest stays `asInvoker`.
+- **The payload rides as a Win32 RCDATA resource**, injected through JUCE's
+  `JUCE_USER_DEFINED_RC_FILE` hook, not as Projucer `BinaryData`: 7 MB of C
+  array is a ~26 MB translation unit rebuilt on every change, while the
+  resource compiler simply reads the file. `Installer/pack-payload.py` puts a
+  magic/length/checksum header in front of it, because `SizeofResource`
+  reports the padded resource size rather than the payload size.
+- **It installs:** the program, its icon, a copy of itself as
+  `Uninstall FlowerMachine.exe`, Start Menu and desktop shortcuts (written
+  with `IShellLinkW` — JUCE's `File::createShortcut` sets no icon and no
+  working directory), the Add/Remove Programs entry, the `.fmpreset`
+  association, and `Documents\FlowerMachine\Presets`.
+- **Uninstall** is the same executable behind `--uninstall`. Windows refuses
+  to delete a running image but will rename one, so it moves itself to the
+  temp folder, deletes the tree, and leaves a detached batch file to sweep up
+  its own image. `MOVEFILE_DELAY_UNTIL_REBOOT` needs an elevated token and is
+  therefore out. Presets and settings are kept unless the operator ticks the
+  box, and only `CardamomTools\FlowerMachine` is ever removed — the folder
+  above it is shared with Kuznya.
+- **Music:** "Tarantella Cardamom", written for the intro, four channels
+  synthesised in code from a note table (`Source/Tune.h`). No audio file, so
+  nothing to license in a public repository. The audio callback follows the
+  same real-time rules as `CartEngine`; the device is opened from the first
+  timer tick, not the constructor, because scanning driver types blocks the
+  message thread for seconds on a PC with Axia WDM endpoints.
+- **Known risk:** an execution policy (AppLocker, WDAC, SRP) that only
+  permits `%WINDIR%` and `%PROGRAMFILES%` would let the install succeed and
+  then block the program from running. Worth testing early on the work PC.
 
 ---
 
@@ -323,8 +362,10 @@ Milestone boundaries are pauses for the owner's verification (house rule).
 | O1 | A cart is: title (assigned or file name), a **Stop button**, a **Loop** toggle, a **Gain** control up to +18 dB. | Per-cart `loop` and `gainDb` return to v1 (§4, §6); stop is a button on the cart, not a menu entry. |
 | — | Graphics via a dedicated `/design` session: a **new canvas**, opened when M3 starts. | UI described functionally; drawing confined to `UI/` (§6). |
 | — | *After M2:* the M1 folder loader was useful — kept as **Fill page from folder…** on the page menu. | Empty cells only, name order (§6). |
-| — | *M3 (2026-09-03):* design canvas "FlowerMachine Look", direction A **Studio panel** chosen by the owner. | Values in `Source/UI/Palette.h`; drawing in `FlowerLookAndFeel`, `CartButton`, `MainComponent`. Typeface Segoe UI until Barlow (OFL) is embedded; Settings button without the gear icon. |
-| — | *After M3:* the owner asked for an **installer** styled like a 90s warez / demoscene installer, to be built after the code review. | Amends §7 ("copy the exe, no installer"); design to be agreed before building. The git repository and remote are being created by the owner. |
+| — | *M3 (2026-09-03):* design canvas "FlowerMachine Look", direction A **Studio panel** chosen by the owner. | Values in `Source/UI/Palette.h`; drawing in `FlowerLookAndFeel`, `CartButton`, `MainComponent`. Settings button without the gear icon. |
+| — | *After M3:* the owner asked for an **installer** styled like a 90s warez / demoscene installer, and for a **complete** install rather than just the executable. | Amends §7 ("copy the exe, no installer"). The owner supplies the music. |
+| — | *2026-09-04:* typeface stays **Segoe UI**, after comparing it with Barlow at the real sizes. | Nothing to embed or license; `Source/UI/Palette.h` is the single place that names it. |
+| — | *2026-09-04:* the git repository at `github.com/CardamomFlower/Flower` is the owner's; **Claude does not commit or push.** | Claude prepares the tree; the owner stages and commits. No `Co-Authored-By` trailers anywhere. |
 
 ### Open
 

@@ -60,6 +60,12 @@ desktop.ini
 .claude/
 
 # ============================================================
+#  Installer payload — repacked from the built exe by
+#  Installer/pack-payload.py, never committed
+# ============================================================
+Installer/Payload/FlowerMachine_payload.bin
+
+# ============================================================
 #  Design canvas — the assembled page is generated from the
 #  .dc.html artboards + canvas.json; keep the sources only
 # ============================================================

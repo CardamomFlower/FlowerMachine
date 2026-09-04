@@ -45,7 +45,8 @@ namespace flowermachine::palette
 
     enum class Weight { regular, semibold, bold };
 
-    /** Barlow once it is embedded (D-table, section 9); Segoe UI until then. */
+    /** Segoe UI: settled with the owner on 2026-09-04 after comparing it with Barlow at the
+        real sizes. It is on every Windows 10, so nothing has to be embedded or licensed. */
     inline const juce::String& fontFamily()
     {
         static const juce::String family ("Segoe UI");

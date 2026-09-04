@@ -1,0 +1,43 @@
+// The FlowerMachine executable, carried as a raw resource.
+//
+// Reached through JUCE's own JUCE_USER_DEFINED_RC_FILE hook, which the Projucer writes
+// into the generated resources.rc. Because that hook REPLACES JUCE's block, the version
+// information has to be restated here.
+//
+// The .bin is produced by Installer/pack-payload.py from the built FlowerMachine.exe.
+
+#include <windows.h>
+
+// id 1, type RT_RCDATA (10) — matches FindResourceW in Source/Payload.cpp
+1 RCDATA "FlowerMachine_payload.bin"
+
+// This file REPLACES the block the Projucer generates, so the icons have to be
+// restated too, under the ids JUCE uses.
+#define IDI_ICON1 101
+#define IDI_ICON2 102
+IDI_ICON1 ICON DISCARDABLE "FlowerMachine.ico"
+IDI_ICON2 ICON DISCARDABLE "FlowerMachine.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION 0,1,0,0
+PRODUCTVERSION 0,1,0,0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "CompanyName",      "Cardamom Tools\0"
+      VALUE "FileDescription",  "FlowerMachine Setup\0"
+      VALUE "FileVersion",      "0.1.0\0"
+      VALUE "ProductName",      "FlowerMachine\0"
+      VALUE "ProductVersion",   "0.1.0\0"
+      VALUE "LegalCopyright",   "(C) 2026 Cardamom Tools\0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1252
+  END
+END

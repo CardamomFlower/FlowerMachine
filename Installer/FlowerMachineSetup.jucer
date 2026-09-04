@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="FlwrSt" name="FlowerMachineSetup" projectType="guiapp" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="0.1.0"
+              companyName="Cardamom Tools" companyCopyright="(C) 2026 Cardamom Tools"
+              companyWebsite="www.cardamomflower.dev" bundleIdentifier="com.cardamomtools.flowermachinesetup"
+              cppLanguageStandard="17">
+  <MAINGROUP id="MgFlwrSt" name="FlowerMachineSetup">
+    <GROUP id="{B0000000-0000-4000-8000-000000000001}" name="Source">
+      <FILE id="StMain" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      <FILE id="StConst" name="InstallerConstants.h" compile="0" resource="0" file="Source/InstallerConstants.h"/>
+      <FILE id="StGlue" name="WindowsGlue.h" compile="0" resource="0" file="Source/WindowsGlue.h"/>
+      <FILE id="StPayH" name="Payload.h" compile="0" resource="0" file="Source/Payload.h"/>
+      <FILE id="StPayC" name="Payload.cpp" compile="1" resource="0" file="Source/Payload.cpp"/>
+      <FILE id="StShH" name="Shortcuts.h" compile="0" resource="0" file="Source/Shortcuts.h"/>
+      <FILE id="StShC" name="Shortcuts.cpp" compile="1" resource="0" file="Source/Shortcuts.cpp"/>
+      <FILE id="StRgH" name="RegistryEntries.h" compile="0" resource="0" file="Source/RegistryEntries.h"/>
+      <FILE id="StRgC" name="RegistryEntries.cpp" compile="1" resource="0" file="Source/RegistryEntries.cpp"/>
+      <FILE id="StInH" name="InstallTask.h" compile="0" resource="0" file="Source/InstallTask.h"/>
+      <FILE id="StInC" name="InstallTask.cpp" compile="1" resource="0" file="Source/InstallTask.cpp"/>
+      <FILE id="StUnH" name="UninstallTask.h" compile="0" resource="0" file="Source/UninstallTask.h"/>
+      <FILE id="StUnC" name="UninstallTask.cpp" compile="1" resource="0" file="Source/UninstallTask.cpp"/>
+      <FILE id="StTune" name="Tune.h" compile="0" resource="0" file="Source/Tune.h"/>
+      <FILE id="StChH" name="ChipSynth.h" compile="0" resource="0" file="Source/ChipSynth.h"/>
+      <FILE id="StChC" name="ChipSynth.cpp" compile="1" resource="0" file="Source/ChipSynth.cpp"/>
+      <FILE id="StCrH" name="Cracktro.h" compile="0" resource="0" file="Source/Cracktro.h"/>
+      <FILE id="StCrC" name="Cracktro.cpp" compile="1" resource="0" file="Source/Cracktro.cpp"/>
+    </GROUP>
+    <GROUP id="{B0000000-0000-4000-8000-000000000002}" name="Payload">
+      <FILE id="StIco" name="FlowerMachine.ico" compile="0" resource="1" file="Payload/FlowerMachine.ico"/>
+    </GROUP>
+  </MAINGROUP>
+  <JUCEOPTIONS JUCE_WASAPI="1" JUCE_DIRECTSOUND="0" JUCE_ASIO="0" JUCE_USE_FLAC="0"
+               JUCE_USE_OGGVORBIS="0" JUCE_USE_MP3AUDIOFORMAT="0" JUCE_USE_CURL="0"
+               JUCE_WEB_BROWSER="0" JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
+  <EXPORTFORMATS>
+    <VS2022 targetFolder="Builds/VisualStudio2022" extraDefs="JUCE_USER_DEFINED_RC_FILE=&quot;payload.rc&quot;">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="FlowerMachineSetup" useRuntimeLibDLL="0"
+                       winArchitecture="x64" headerPath="..\..\Payload"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="FlowerMachineSetup" useRuntimeLibDLL="0"
+                       winArchitecture="x64" headerPath="..\..\Payload"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_devices" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_core" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_data_structures" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_events" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_graphics" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_gui_basics" path="C:\Program Files\JUCE\modules"/>
+      </MODULEPATHS>
+    </VS2022>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+  </MODULES>
+</JUCERPROJECT>
