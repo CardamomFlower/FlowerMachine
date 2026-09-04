@@ -27,8 +27,6 @@ with, offer a Start Menu entry, a desktop shortcut and the `.fmpreset` file
 association. Uninstall it from Settings > Apps like anything else; your presets
 are left where they are unless you tick the box that says otherwise.
 
-The first time you open it, it is empty. That is on purpose.
-
 ## Filling it
 
 Drag an audio file from Explorer onto any pad, or double-click an empty one to
@@ -42,7 +40,7 @@ The same menu renames a page, and the **+** at the right adds one.
 
 ## A pad
 
-Each pad carries a title — the file name until you rename it — a **Stop**
+Each pad carries a title - the file name until you rename it - a **Stop**
 button, a **Loop** toggle and a **Gain** knob running from −24 to +18 dB, which
 a double-click puts back to zero. While it plays it shows the time remaining
 and a progress bar. The colour band along the top is yours to use however you
@@ -60,7 +58,7 @@ points at your own library.
 
 Each pad remembers both where its file is and where it sits relative to the
 preset, so moving a preset together with its audio folder keeps everything
-working — useful when the machine you prepare on and the machine you play from
+working - useful when the machine you prepare on and the machine you play from
 are not the same. If a file has genuinely gone, the pad is marked **missing**
 and keeps its name and colour so you can see what is absent; **Relocate…**
 points it at the file again. A preset always opens, whatever is missing.
@@ -70,7 +68,7 @@ does not fill the machine. A pad already playing carries on to the end.
 
 ## Sound
 
-Stereo output through WASAPI — shared, low-latency or exclusive — or
+Stereo output through WASAPI - shared, low-latency or exclusive - or
 DirectSound. No ASIO. It plays WAV, AIFF, FLAC, OGG Vorbis, MP3 and WMA. AAC,
 M4A and Opus are not supported; convert those first. A file longer than thirty
 minutes is refused, and only the first two channels of a file are used.
