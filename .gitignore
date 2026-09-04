@@ -1,0 +1,66 @@
+# ============================================================
+#  JUCE / Projucer auto-generated  (regenerated on every save)
+# ============================================================
+Builds/
+JuceLibraryCode/
+
+# ============================================================
+#  Visual Studio build artifacts
+# ============================================================
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+
+# Compile + link outputs
+*.exp
+*.lib
+*.pdb
+*.idb
+*.obj
+*.ilk
+*.ipdb
+*.iobj
+*.tlog
+*.log
+*.lastbuildstate
+*.unsuccessfulbuild
+
+# ============================================================
+#  macOS / Xcode  (per future Mac builds)
+# ============================================================
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+build/
+
+# ============================================================
+#  OS clutter
+# ============================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================================
+#  Misc
+# ============================================================
+*.tmp
+*.bak
+*~
+
+# ============================================================
+#  Agent / editor local config
+# ============================================================
+.claude/
+
+# ============================================================
+#  Design canvas — the assembled page is generated from the
+#  .dc.html artboards + canvas.json; keep the sources only
+# ============================================================
+design/flowermachine-look.html

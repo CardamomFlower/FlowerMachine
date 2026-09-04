@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="Flwr01" name="FlowerMachine" projectType="guiapp" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="0.1.0"
+              companyName="Cardamom Tools" companyCopyright="(C) 2026 Cardamom Tools"
+              companyWebsite="www.cardamomflower.dev" bundleIdentifier="com.cardamomtools.flowermachine"
+              cppLanguageStandard="17">
+  <MAINGROUP id="MgFlwr" name="FlowerMachine">
+    <GROUP id="{F10E0000-0000-4000-8000-000000000001}" name="Source">
+      <FILE id="FmMain" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      <FILE id="FmConst" name="Constants.h" compile="0" resource="0" file="Source/Constants.h"/>
+      <GROUP id="{F10E0000-0000-4000-8000-000000000004}" name="Model">
+        <FILE id="FmIdH" name="Ids.h" compile="0" resource="0" file="Source/Model/Ids.h"/>
+        <FILE id="FmCsH" name="CartStatus.h" compile="0" resource="0" file="Source/Model/CartStatus.h"/>
+        <FILE id="FmPrH" name="Preset.h" compile="0" resource="0" file="Source/Model/Preset.h"/>
+        <FILE id="FmPrC" name="Preset.cpp" compile="1" resource="0" file="Source/Model/Preset.cpp"/>
+      </GROUP>
+      <GROUP id="{F10E0000-0000-4000-8000-000000000002}" name="Engine">
+        <FILE id="FmSdaH" name="SampleData.h" compile="0" resource="0" file="Source/Engine/SampleData.h"/>
+        <FILE id="FmSslH" name="SampleSlot.h" compile="0" resource="0" file="Source/Engine/SampleSlot.h"/>
+        <FILE id="FmCmdH" name="Commands.h" compile="0" resource="0" file="Source/Engine/Commands.h"/>
+        <FILE id="FmCeH" name="CartEngine.h" compile="0" resource="0" file="Source/Engine/CartEngine.h"/>
+        <FILE id="FmCeC" name="CartEngine.cpp" compile="1" resource="0" file="Source/Engine/CartEngine.cpp"/>
+        <FILE id="FmAeH" name="AudioEngine.h" compile="0" resource="0" file="Source/Engine/AudioEngine.h"/>
+        <FILE id="FmAeC" name="AudioEngine.cpp" compile="1" resource="0" file="Source/Engine/AudioEngine.cpp"/>
+      </GROUP>
+      <GROUP id="{F10E0000-0000-4000-8000-000000000005}" name="Loading">
+        <FILE id="FmSlH" name="SampleLoader.h" compile="0" resource="0" file="Source/Loading/SampleLoader.h"/>
+        <FILE id="FmSlC" name="SampleLoader.cpp" compile="1" resource="0" file="Source/Loading/SampleLoader.cpp"/>
+      </GROUP>
+      <GROUP id="{F10E0000-0000-4000-8000-000000000006}" name="Control">
+        <FILE id="FmCtH" name="Controller.h" compile="0" resource="0" file="Source/Control/Controller.h"/>
+        <FILE id="FmCtC" name="Controller.cpp" compile="1" resource="0" file="Source/Control/Controller.cpp"/>
+      </GROUP>
+      <GROUP id="{F10E0000-0000-4000-8000-000000000003}" name="UI">
+        <FILE id="FmMcH" name="MainComponent.h" compile="0" resource="0" file="Source/UI/MainComponent.h"/>
+        <FILE id="FmMcC" name="MainComponent.cpp" compile="1" resource="0" file="Source/UI/MainComponent.cpp"/>
+        <FILE id="FmPsH" name="PageStrip.h" compile="0" resource="0" file="Source/UI/PageStrip.h"/>
+        <FILE id="FmPsC" name="PageStrip.cpp" compile="1" resource="0" file="Source/UI/PageStrip.cpp"/>
+        <FILE id="FmDgH" name="Dialogs.h" compile="0" resource="0" file="Source/UI/Dialogs.h"/>
+        <FILE id="FmDgC" name="Dialogs.cpp" compile="1" resource="0" file="Source/UI/Dialogs.cpp"/>
+        <FILE id="FmCgH" name="CartGrid.h" compile="0" resource="0" file="Source/UI/CartGrid.h"/>
+        <FILE id="FmCgC" name="CartGrid.cpp" compile="1" resource="0" file="Source/UI/CartGrid.cpp"/>
+        <FILE id="FmCbH" name="CartButton.h" compile="0" resource="0" file="Source/UI/CartButton.h"/>
+        <FILE id="FmCbC" name="CartButton.cpp" compile="1" resource="0" file="Source/UI/CartButton.cpp"/>
+        <FILE id="FmSdH" name="SettingsDialog.h" compile="0" resource="0" file="Source/UI/SettingsDialog.h"/>
+        <FILE id="FmSdC" name="SettingsDialog.cpp" compile="1" resource="0" file="Source/UI/SettingsDialog.cpp"/>
+        <FILE id="FmPlH" name="Palette.h" compile="0" resource="0" file="Source/UI/Palette.h"/>
+        <FILE id="FmLfH" name="FlowerLookAndFeel.h" compile="0" resource="0" file="Source/UI/FlowerLookAndFeel.h"/>
+        <FILE id="FmLfC" name="FlowerLookAndFeel.cpp" compile="1" resource="0" file="Source/UI/FlowerLookAndFeel.cpp"/>
+        <FILE id="FmRdH" name="Renderer.h" compile="0" resource="0" file="Source/UI/Renderer.h"/>
+      </GROUP>
+    </GROUP>
+  </MAINGROUP>
+  <JUCEOPTIONS JUCE_WASAPI="1" JUCE_DIRECTSOUND="1" JUCE_ASIO="0" JUCE_USE_FLAC="1"
+               JUCE_USE_OGGVORBIS="1" JUCE_USE_MP3AUDIOFORMAT="1" JUCE_USE_WINDOWS_MEDIA_FORMAT="1"
+               JUCE_USE_CURL="0" JUCE_WEB_BROWSER="0" JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
+  <EXPORTFORMATS>
+    <VS2022 targetFolder="Builds/VisualStudio2022">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="FlowerMachine" useRuntimeLibDLL="0"
+                       winArchitecture="x64"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="FlowerMachine" useRuntimeLibDLL="0"
+                       winArchitecture="x64"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_devices" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_formats" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_processors" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_processors_headless" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_utils" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_core" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_data_structures" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_events" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_graphics" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_gui_basics" path="C:\Program Files\JUCE\modules"/>
+        <MODULEPATH id="juce_gui_extra" path="C:\Program Files\JUCE\modules"/>
+      </MODULEPATHS>
+    </VS2022>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_audio_processors_headless" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+  </MODULES>
+</JUCERPROJECT>

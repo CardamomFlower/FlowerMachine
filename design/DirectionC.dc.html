@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; background: #141414; font-family: Barlow, 'Segoe UI', system-ui, sans-serif; color: #f2f2f2; }
+    a { color: #e9a23b; } a:hover { color: #f5c664; }
+  </style>
+</helmet>
+<div style="display:flex; flex-direction:column; gap:16px; width:700px; height:260px; box-sizing:border-box; padding:20px 24px; background:#141414; font-family: Barlow, 'Segoe UI', system-ui, sans-serif;">
+  <div style="display:flex; flex-direction:column; gap:2px;">
+    <div style="font-size:16px; font-weight:700; color:#f2f2f2;">Option C - Colour blocks</div>
+    <div style="font-size:12px; font-weight:500; color:#a0a0a0;">Each cart flooded with its category colour, white type, neutral black chrome. Fastest to scan from across the room; loud, and the amber "playing" signal has to fight the colours.</div>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px;">
+    <div style="display:flex; flex-direction:column; justify-content:space-between; height:96px; padding:10px 12px; box-sizing:border-box; border-radius:4px; background:#3f6fb0;"><div style="font-size:16px; font-weight:700; color:#ffffff;">Station ID</div><div style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.75);">0:05</div></div>
+    <div style="display:flex; flex-direction:column; justify-content:space-between; height:96px; padding:10px 12px; box-sizing:border-box; border-radius:4px; background:#3f6fb0; outline:3px solid #f5c664; outline-offset:-3px;"><div style="font-size:16px; font-weight:700; color:#ffffff;">Top of the Hour</div><div style="font-size:13px; font-weight:700; color:#f5c664;">-0:04</div></div>
+    <div style="display:flex; flex-direction:column; justify-content:space-between; height:96px; padding:10px 12px; box-sizing:border-box; border-radius:4px; background:#3f8a52;"><div style="font-size:16px; font-weight:700; color:#ffffff;">Bed - Talk 1</div><div style="display:flex; justify-content:space-between;"><div style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.75);">2:30</div><div style="font-size:10px; font-weight:700; letter-spacing:0.08em; color:#ffffff;">LOOP</div></div></div>
+    <div style="display:flex; flex-direction:column; justify-content:space-between; height:96px; padding:10px 12px; box-sizing:border-box; border-radius:4px; background:#222222;"><div style="font-size:11px; font-weight:500; color:#666666;">12</div><div></div></div>
+  </div>
+  <div style="font-size:12px; font-weight:500; color:#666666;">Sketch only: carts without a colour would fall back to a grey block.</div>
+</div>
+</x-dc>
+</body>
+</html>

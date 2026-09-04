@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; background: #1c1a18; font-family: Barlow, 'Segoe UI', system-ui, sans-serif; color: #ede6d8; }
+    a { color: #e9a23b; } a:hover { color: #f5c664; }
+  </style>
+</helmet>
+<div style="display:flex; flex-direction:column; gap:22px; width:720px; height:1000px; box-sizing:border-box; padding:28px 32px; background:#1c1a18; font-family: Barlow, 'Segoe UI', system-ui, sans-serif;">
+  <div style="display:flex; flex-direction:column; gap:4px;">
+    <div style="font-size:22px; font-weight:700; color:#ede6d8;">Values for the JUCE implementation</div>
+    <div style="font-size:13px; font-weight:500; color:#a59c8f;">One accent, cream on warm charcoal. Colours as 6-digit hex (prefix 0xff in JUCE); sizes in pixels at 1440 x 900, scaled with the cell.</div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="font-size:14px; font-weight:600; color:#ede6d8;">Colours</div>
+    <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px 24px; font-size:12px; line-height:16px; color:#a59c8f;">
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#1c1a18; border:1px solid #3d3833;"></div><div><span style="color:#ede6d8; font-weight:600;">window</span> #1c1a18 - ResizableWindow background</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#24211e; border:1px solid #3d3833;"></div><div><span style="color:#ede6d8; font-weight:600;">panel</span> #24211e - top bar, status line</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#2e2a26; border:1px solid #3d3833;"></div><div><span style="color:#ede6d8; font-weight:600;">cart</span> #2e2a26 - ready cart fill</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#211f1c; border:1px solid #3d3833;"></div><div><span style="color:#ede6d8; font-weight:600;">cartEmpty</span> #211f1c, outline #2a2724</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#262320; border:1px solid #3d3833;"></div><div><span style="color:#ede6d8; font-weight:600;">cartLoading</span> #262320</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#5b4220; border:1px solid #e9a23b;"></div><div><span style="color:#ede6d8; font-weight:600;">cartPlaying</span> #5b4220, outline 2 px accent</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#3a2523; border:1px solid #8a3a33;"></div><div><span style="color:#ede6d8; font-weight:600;">cartMissing</span> #3a2523, outline #8a3a33, text #e08a80</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#3d3833;"></div><div><span style="color:#ede6d8; font-weight:600;">outline</span> #3d3833 - carts; strong #57504a; chrome dividers (panelLine) #33302b</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#33302b; border:1px solid #47423c;"></div><div><span style="color:#ede6d8; font-weight:600;">control</span> #33302b, outline #47423c - File, Settings, +</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#3b3631;"></div><div><span style="color:#ede6d8; font-weight:600;">cartControl</span> #3b3631 - STOP, LOOP; knob #1f1b17</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#ede6d8;"></div><div><span style="color:#ede6d8; font-weight:600;">text</span> #ede6d8; secondary #a59c8f; dim #6f675e</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#e9a23b;"></div><div><span style="color:#ede6d8; font-weight:600;">accent</span> #e9a23b - playing, progress, active tab, LOOP lit, dirty dot; bright text #f5c664</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="width:22px; height:22px; border-radius:4px; background:#d94a3d;"></div><div><span style="color:#ede6d8; font-weight:600;">danger</span> #d94a3d - STOP ALL only; text on it #fff4ee</div></div>
+      <div style="display:flex; align-items:center; gap:10px;"><div style="display:flex; gap:2px;"><div style="width:10px; height:22px; border-radius:2px; background:#4e7fc4;"></div><div style="width:10px; height:22px; border-radius:2px; background:#3f8f8a;"></div><div style="width:10px; height:22px; border-radius:2px; background:#4f9a5b;"></div><div style="width:10px; height:22px; border-radius:2px; background:#8a63b8;"></div><div style="width:10px; height:22px; border-radius:2px; background:#c0703f;"></div></div><div><span style="color:#ede6d8; font-weight:600;">band presets</span> #4e7fc4 #3f8f8a #4f9a5b #8a63b8 #c0703f - offered in the colour picker; any colour allowed</div></div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="font-size:14px; font-weight:600; color:#ede6d8;">Type - Barlow (OFL, embedded as BinaryData; fallback Segoe UI)</div>
+    <div style="display:flex; flex-direction:column; gap:4px; font-size:12px; line-height:16px; color:#a59c8f;">
+      <div><span style="color:#ede6d8; font-weight:600;">Cart title</span> SemiBold 15, line 18, one line, ellipsis. Scale: 0.175 x cell height, clamp 12..18.</div>
+      <div><span style="color:#ede6d8; font-weight:600;">Cart time</span> Medium 13, tabular figures; playing: SemiBold, bright accent.</div>
+      <div><span style="color:#ede6d8; font-weight:600;">Strip buttons</span> SemiBold 11, letter-spacing 6 %, uppercase.</div>
+      <div><span style="color:#ede6d8; font-weight:600;">Preset name</span> SemiBold 18. <span style="color:#ede6d8; font-weight:600;">Tabs</span> SemiBold 14. <span style="color:#ede6d8; font-weight:600;">Buttons</span> SemiBold 13.</div>
+      <div><span style="color:#ede6d8; font-weight:600;">STOP ALL</span> Bold 16, letter-spacing 8 %. <span style="color:#ede6d8; font-weight:600;">Status</span> Medium 12.</div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="font-size:14px; font-weight:600; color:#ede6d8;">Sizes and shapes</div>
+    <div style="display:flex; flex-direction:column; gap:4px; font-size:12px; line-height:16px; color:#a59c8f;">
+      <div><span style="color:#ede6d8; font-weight:600;">Window</span> top bar 56, content padding 16 (12 at the bottom), tab row 36, gaps 12, status 28. Grid gap 8, cells fill the rest.</div>
+      <div><span style="color:#ede6d8; font-weight:600;">Cart</span> radius 6, outline 1 (playing 2). Band 6. Play-area padding: top 5, right 10, bottom 3, left 10. Progress 3, margins 10. Strip 26 with 4 px gaps, buttons 20 tall radius 4, knob 20 round.</div>
+      <div><span style="color:#ede6d8; font-weight:600;">Top bar</span> File 72 x 32, Settings 112 x 32 with a 16 px stroke gear, STOP ALL 168 x 40, radius 6 everywhere. Dirty mark: 8 px accent dot after the name.</div>
+      <div><span style="color:#ede6d8; font-weight:600;">Tabs</span> 36 tall, padding 16, active = #2a2622 fill + 2 px accent underline + cream text; inactive = secondary text. "+" 32 x 32 control.</div>
+      <div><span style="color:#ede6d8; font-weight:600;">Drop target</span> 3 px accent outline, radius 8, 2 px outside the hovered cell.</div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="font-size:14px; font-weight:600; color:#ede6d8;">LookAndFeel mapping</div>
+    <div style="display:flex; flex-direction:column; gap:4px; font-size:12px; line-height:16px; color:#a59c8f;">
+      <div>ResizableWindow backgroundColourId = window. TextButton buttonColourId = control, buttonOnColourId = accent, textColourOffId = text, textColourOnId = window.</div>
+      <div>ComboBox outline = outline. Label text = text. TabbedButtonBar tabOutline = outline, frontOutline = accent, frontText = text, tabText = secondary.</div>
+      <div>Slider rotarySliderFill = accent, rotarySliderOutline = strong outline, thumb = text. PopupMenu background = panel, highlighted = control.</div>
+      <div>AlertWindow background = panel, text = text, outline = strong outline.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
