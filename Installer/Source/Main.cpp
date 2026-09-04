@@ -12,7 +12,13 @@ namespace flowerinstall
 
         const juce::String getApplicationName() override    { return "FlowerMachine Setup"; }
         const juce::String getApplicationVersion() override { return APP_VERSION; }
-        bool moreThanOneInstanceAllowed() override          { return false; }
+
+        /*  True on purpose. With single-instance behaviour, launching the uninstaller
+            while a setup window happened to be open made the second process exit without
+            a word — so uninstalling from Settings > Apps looked like it simply did
+            nothing. Two setup windows are harmless: the install is idempotent, and both
+            halves refuse to run while FlowerMachine itself is open. */
+        bool moreThanOneInstanceAllowed() override          { return true; }
 
         void initialise (const juce::String&) override
         {

@@ -16,7 +16,6 @@ namespace
         "WRITING THE UNINSTALLER",
         "MAKING SHORTCUTS",
         "REGISTERING",
-        "MAKING THE PRESETS FOLDER",
         "DONE"
     };
 
@@ -176,12 +175,11 @@ void InstallTask::run()
     if (threadShouldExit())
         return;
 
-    //==============================================================================
-    setStep (5);
-    presetsFolder().createDirectory();   // convenience only: not fatal if it fails
+    // Deliberately nothing under Documents: a fresh install opens an empty cart wall,
+    // and the app creates its own presets folder the first time you save one.
 
     //==============================================================================
-    setStep (6);
+    setStep (5);
     ok = true;
     message = shortcutProblems.isEmpty()
                   ? "INSTALLED IN " + folder.getFullPathName().toUpperCase()

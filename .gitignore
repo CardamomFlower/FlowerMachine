@@ -66,7 +66,8 @@ desktop.ini
 Installer/Payload/FlowerMachine_payload.bin
 
 # ============================================================
-#  Design canvas — the assembled page is generated from the
-#  .dc.html artboards + canvas.json; keep the sources only
+#  Working material, kept locally and out of the repository:
+#  the design canvas and the internal design / review notes
 # ============================================================
-design/flowermachine-look.html
+design/
+docs/

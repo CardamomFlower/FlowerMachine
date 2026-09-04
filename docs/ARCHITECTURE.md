@@ -307,8 +307,10 @@ One self-contained `FlowerMachineSetup.exe` that carries the built
 - **It installs:** the program, its icon, a copy of itself as
   `Uninstall FlowerMachine.exe`, Start Menu and desktop shortcuts (written
   with `IShellLinkW` — JUCE's `File::createShortcut` sets no icon and no
-  working directory), the Add/Remove Programs entry, the `.fmpreset`
-  association, and `Documents\FlowerMachine\Presets`.
+  working directory), the Add/Remove Programs entry and the `.fmpreset`
+  association. **Nothing under Documents:** a fresh install opens an empty
+  cart wall, and the app makes its own presets folder the first time one is
+  saved.
 - **Uninstall** is the same executable behind `--uninstall`. Windows refuses
   to delete a running image but will rename one, so it moves itself to the
   temp folder, deletes the tree, and leaves a detached batch file to sweep up

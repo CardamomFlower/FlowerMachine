@@ -1,74 +1,117 @@
 # FlowerMachine
 
-A cart wall for radio use: an 8x8 grid of carts, pages as tabs, presets saved to
-file. Click a cart to play it, click again to restart it. Starting a cart stops
-whatever else is playing, unless that cart is looping — a bed keeps running under
-the jingles until its own Stop, or STOP ALL.
+A cart wall for radio: 64 buttons, each holding one audio file, ready to fire
+during a live show.
 
-Windows desktop application, mouse only. Part of
-[Cardamom Tools](https://www.cardamomflower.dev).
+![The main window](assets/screenshot.png)
 
-![The main window](design/README-window.png)
+Click a cart and it plays. Click it again and it starts over. Starting a cart
+stops whatever else was playing — except a cart set to loop, so a music bed
+keeps running underneath the jingles until you stop it yourself, or hit
+**STOP ALL**.
 
-## A cart
+Carts are laid out eight by eight and grouped into pages you switch with tabs.
+A set of pages is a preset, saved to a file.
 
-A title, taken from the file name unless you rename it. A **Stop** button, a
-**Loop** toggle, and a **Gain** knob from −24 to +18 dB (double-click resets it).
-While a cart plays it shows the time remaining and a progress bar. An optional
-colour band groups carts by kind.
+Windows 10 or later, 64-bit. Mouse only, by design: nothing on screen needs the
+keyboard during a show.
 
-Assign a file by dropping it on a cell from Explorer, by double-clicking an empty
-cell, or from the cart's right-click menu. The page tab's right-click menu can
-fill a whole page from a folder in one go.
+## Getting it
+
+Download `FlowerMachineSetup.exe` from
+[Releases](https://github.com/CardamomFlower/Flower/releases) and run it.
+
+It installs for you alone, into `%LOCALAPPDATA%\Programs\FlowerMachine`, so it
+never asks for an administrator password. It adds a Start Menu entry, an
+optional desktop shortcut, and opens `.fmpreset` files. Uninstall it from
+Settings > Apps like anything else; your presets are left where they are unless
+you tick the box that says otherwise.
+
+The first time you open it, it is empty. That is on purpose.
+
+## Filling it
+
+Drag an audio file from Explorer onto any cart, or double-click an empty one to
+browse. To load a whole page at once, right-click the page tab and pick **Fill
+page from folder…**.
+
+Each cart carries a title (the file name until you rename it), a **Stop**
+button, a **Loop** toggle and a **Gain** knob running from −24 to +18 dB, which
+a double-click puts back to zero. While a cart is playing it shows the time
+remaining and a progress bar. A colour band along the top is there to group
+carts by kind — jingles, beds, effects — however you like.
+
+Right-click a cart for the rest: rename, colour, relocate a file that has moved,
+or clear it.
 
 ## Presets
 
-A preset is the set of pages with their cart assignments, saved as `.fmpreset`
-XML in `Documents\FlowerMachine\Presets` by default. Each cart records both an
-absolute path and a path relative to the preset file, so a preset moved together
-with its audio library keeps working. A file that resolves nowhere leaves the
-cart marked *missing*, with its title and colour intact and a **Relocate…**
-command to repair it — the preset always opens.
+`File > Save` writes a `.fmpreset` file: your pages, your carts, their titles,
+colours, gains and loop flags. The audio itself is never copied; presets point
+at your library.
 
-Only the visible page is held in memory. Switching tab unloads the page you left
-and decodes the one you opened; a cart already playing carries on to the end.
+Each cart remembers both where the file is and where it sits relative to the
+preset, so moving a preset together with its audio folder keeps everything
+working — useful when the studio machine and the machine you prepare on are not
+the same. If a file has genuinely gone, the cart is marked **missing** and keeps
+its name and colour so you can see what is absent; **Relocate…** points it at
+the file again. A preset always opens, whatever is missing.
 
-## Audio
+Only the page you are looking at is held in memory. Switching tab frees the one
+you left, so a show with many pages does not fill the machine. A cart already
+playing carries on to the end.
 
-Output only, stereo, through WASAPI (shared or exclusive) or DirectSound. WAV,
-AIFF, FLAC, OGG Vorbis and MP3 are decoded by JUCE; AAC, M4A and WMA go through
-Windows Media Foundation. Opus is not supported — convert those files first.
+## Sound
 
-Everything is decoded to RAM at the device sample rate, so a click reaches the
-output within one audio block. Settings has a test tone for checking the routing
-before a show, and a **Renderer** switch (Direct2D or software) for machines
-whose graphics driver cannot manage Direct2D; `FlowerMachine.exe
---software-renderer` forces the fallback for one run if the window will not paint
-at all.
+Stereo output through WASAPI, shared or exclusive, or DirectSound. WAV, AIFF,
+FLAC, OGG Vorbis and MP3 play out of the box; AAC, M4A and WMA go through
+Windows Media Foundation. Opus files are not supported — convert them first.
 
-## Building
+Files are decoded to memory when a page opens, so a click reaches the output
+immediately rather than waiting on the disk.
 
-JUCE 8.0.12 and Visual Studio 2022, x64. There is no CMake build: the project is
-generated by the Projucer.
+**Settings** picks the output device and has a test tone for checking the
+routing before you go on air. It also carries a **Renderer** switch: if the
+window will not draw properly on an older graphics driver, change it from
+Direct2D to Software. If it will not draw at all, start the program once as
+`FlowerMachine.exe --software-renderer` and then change it there.
+
+## Building from source
+
+You need JUCE 8.0.12 and Visual Studio 2022. There is no CMake build — the
+Visual Studio project is generated by the Projucer.
+
+The `.jucer` files expect JUCE at `C:\Program Files\JUCE`. If yours lives
+somewhere else, open them in the Projucer and repoint the module paths before
+saving.
 
 ```
 "C:\Program Files\JUCE\Projucer.exe" --resave FlowerMachine.jucer
-MSBuild Builds\VisualStudio2022\FlowerMachine.sln /p:Configuration=Release /p:Platform=x64 /m
+"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" Builds\VisualStudio2022\FlowerMachine.sln /p:Configuration=Release /p:Platform=x64 /m
 ```
 
-The executable lands in `Builds\VisualStudio2022\x64\Release\App\`. Both
-configurations link the runtime statically, so the result is a single file with
-no redistributable to install. Zero third-party dependencies.
+`FlowerMachine.exe` lands in `Builds\VisualStudio2022\x64\Release\App\`. Both
+configurations link the C runtime statically, so it is a single file that needs
+no redistributable, and it uses nothing beyond JUCE itself.
 
-## Layout
+The installer is a second, separate program that carries a copy of
+`FlowerMachine.exe` inside it. Build the app first, then:
 
-| Path | What |
-|---|---|
-| `Source/Model/` | the preset document: ValueTree, XML, path resolution |
-| `Source/Engine/` | the audio thread: voices, mixing, lock-free sample handoff |
-| `Source/Loading/` | decoding and resampling on a thread pool |
-| `Source/Control/` | the one place model, loader and engine meet |
-| `Source/UI/` | everything that knows about pixels |
-| `docs/ARCHITECTURE.md` | the design, locked; decisions and their reasons |
-| `docs/REVIEW-2026-09-04.md` | code review findings and what was done about them |
-| `design/` | the design canvas artboards |
+```
+python Installer\pack-payload.py
+"C:\Program Files\JUCE\Projucer.exe" --resave Installer\FlowerMachineSetup.jucer
+"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" Installer\Builds\VisualStudio2022\FlowerMachineSetup.sln /p:Configuration=Release /p:Platform=x64 /m
+```
+
+`pack-payload.py` wraps the freshly built `FlowerMachine.exe` in a small header
+and puts it where the resource compiler will find it. Run it again whenever the
+app changes.
+
+## Licence
+
+[GNU Affero General Public License v3.0](LICENSE).
+
+JUCE 8 is offered either under the AGPLv3 or under a paid commercial licence.
+This project takes the first road, which means anything you build and
+distribute from this source has to carry the same licence and come with its
+source.
