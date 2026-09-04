@@ -5,7 +5,7 @@ you click it.
 
 ![The main window](assets/screenshot.png)
 
-Sixty-four pads to a page, and as many pages as you need, switched with tabs.
+Sixty-four pads to a page, up to sixteen pages, switched with tabs.
 Click a pad and it plays. Click it again and it starts over. Starting a pad
 stops whatever else was playing, so one sound follows another cleanly — except
 for a pad set to **Loop**, which keeps running underneath until you stop it
@@ -22,10 +22,10 @@ Download `FlowerMachineSetup.exe` from
 [Releases](https://github.com/CardamomFlower/Flower/releases) and run it.
 
 It installs for you alone, into `%LOCALAPPDATA%\Programs\FlowerMachine`, so it
-never asks for an administrator password. It adds a Start Menu entry, an
-optional desktop shortcut, and opens `.fmpreset` files. Uninstall it from
-Settings > Apps like anything else; your presets are left where they are unless
-you tick the box that says otherwise.
+never asks for an administrator password. Three tick-boxes, all on to start
+with, offer a Start Menu entry, a desktop shortcut and the `.fmpreset` file
+association. Uninstall it from Settings > Apps like anything else; your presets
+are left where they are unless you tick the box that says otherwise.
 
 The first time you open it, it is empty. That is on purpose.
 
@@ -70,9 +70,10 @@ does not fill the machine. A pad already playing carries on to the end.
 
 ## Sound
 
-Stereo output through WASAPI, shared or exclusive, or DirectSound. WAV, AIFF,
-FLAC, OGG Vorbis and MP3 play out of the box; AAC, M4A and WMA go through
-Windows Media Foundation. Opus files are not supported — convert them first.
+Stereo output through WASAPI — shared, low-latency or exclusive — or
+DirectSound. No ASIO. It plays WAV, AIFF, FLAC, OGG Vorbis, MP3 and WMA. AAC,
+M4A and Opus are not supported; convert those first. A file longer than thirty
+minutes is refused, and only the first two channels of a file are used.
 
 Files are decoded to memory when a page opens, so a click reaches the output
 immediately rather than waiting on the disk.
