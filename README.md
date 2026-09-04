@@ -1,20 +1,20 @@
 # FlowerMachine
 
-A cart wall for radio: 64 buttons, each holding one audio file, ready to fire
-during a live show.
+A jingle machine: a grid of pads, each holding one sound, that plays the moment
+you click it.
 
 ![The main window](assets/screenshot.png)
 
-Click a cart and it plays. Click it again and it starts over. Starting a cart
-stops whatever else was playing — except a cart set to loop, so a music bed
-keeps running underneath the jingles until you stop it yourself, or hit
-**STOP ALL**.
+Sixty-four pads to a page, and as many pages as you need, switched with tabs.
+Click a pad and it plays. Click it again and it starts over. Starting a pad
+stops whatever else was playing, so one sound follows another cleanly — except
+for a pad set to **Loop**, which keeps running underneath until you stop it
+yourself or hit **STOP ALL**.
 
-Carts are laid out eight by eight and grouped into pages you switch with tabs.
-A set of pages is a preset, saved to a file.
+Useful anywhere a sound has to land on cue and not a second later: a radio show,
+a podcast, a theatre, a stream, a live set, a rehearsal room.
 
-Windows 10 or later, 64-bit. Mouse only, by design: nothing on screen needs the
-keyboard during a show.
+Windows 10 or later, 64-bit.
 
 ## Getting it
 
@@ -31,35 +31,42 @@ The first time you open it, it is empty. That is on purpose.
 
 ## Filling it
 
-Drag an audio file from Explorer onto any cart, or double-click an empty one to
+Drag an audio file from Explorer onto any pad, or double-click an empty one to
 browse. To load a whole page at once, right-click the page tab and pick **Fill
-page from folder…**.
+page from folder…**, which drops the folder's files into the empty pads in
+name order.
 
-Each cart carries a title (the file name until you rename it), a **Stop**
+![The page menu](assets/page-menu.png)
+
+The same menu renames a page, and the **+** at the right adds one.
+
+## A pad
+
+Each pad carries a title — the file name until you rename it — a **Stop**
 button, a **Loop** toggle and a **Gain** knob running from −24 to +18 dB, which
-a double-click puts back to zero. While a cart is playing it shows the time
-remaining and a progress bar. A colour band along the top is there to group
-carts by kind — jingles, beds, effects — however you like.
+a double-click puts back to zero. While it plays it shows the time remaining
+and a progress bar. The colour band along the top is yours to use however you
+like: by kind, by segment, by whoever is on next.
 
-Right-click a cart for the rest: rename, colour, relocate a file that has moved,
-or clear it.
+Right-click a pad for the rest.
+
+![A pad playing, and the pad menu](assets/cart-menu.png)
 
 ## Presets
 
-`File > Save` writes a `.fmpreset` file: your pages, your carts, their titles,
-colours, gains and loop flags. The audio itself is never copied; presets point
-at your library.
+`File > Save` writes a `.fmpreset` file: your pages, your pads, their titles,
+colours, gains and loop flags. The audio itself is never copied; a preset
+points at your own library.
 
-Each cart remembers both where the file is and where it sits relative to the
+Each pad remembers both where its file is and where it sits relative to the
 preset, so moving a preset together with its audio folder keeps everything
-working — useful when the studio machine and the machine you prepare on are not
-the same. If a file has genuinely gone, the cart is marked **missing** and keeps
-its name and colour so you can see what is absent; **Relocate…** points it at
-the file again. A preset always opens, whatever is missing.
+working — useful when the machine you prepare on and the machine you play from
+are not the same. If a file has genuinely gone, the pad is marked **missing**
+and keeps its name and colour so you can see what is absent; **Relocate…**
+points it at the file again. A preset always opens, whatever is missing.
 
-Only the page you are looking at is held in memory. Switching tab frees the one
-you left, so a show with many pages does not fill the machine. A cart already
-playing carries on to the end.
+Only the page you are looking at is held in memory, so a set with many pages
+does not fill the machine. A pad already playing carries on to the end.
 
 ## Sound
 
@@ -71,10 +78,10 @@ Files are decoded to memory when a page opens, so a click reaches the output
 immediately rather than waiting on the disk.
 
 **Settings** picks the output device and has a test tone for checking the
-routing before you go on air. It also carries a **Renderer** switch: if the
-window will not draw properly on an older graphics driver, change it from
-Direct2D to Software. If it will not draw at all, start the program once as
-`FlowerMachine.exe --software-renderer` and then change it there.
+routing before you start. It also carries a **Renderer** switch: if the window
+will not draw properly on an older graphics driver, change it from Direct2D to
+Software. If it will not draw at all, start the program once as
+`FlowerMachine.exe --software-renderer` and change it there.
 
 ## Building from source
 
