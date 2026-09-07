@@ -58,6 +58,11 @@ bool CartEngine::isPlaying (int cartId) const noexcept
     return isValidCart (cartId) && carts[(size_t) cartId].playing.load();
 }
 
+juce::uint32 CartEngine::getStartCount (int cartId) const noexcept
+{
+    return isValidCart (cartId) ? carts[(size_t) cartId].startCount.load() : 0;
+}
+
 juce::int64 CartEngine::getPlayheadFrames (int cartId) const noexcept
 {
     return isValidCart (cartId) ? carts[(size_t) cartId].playhead.load() : 0;
@@ -79,17 +84,22 @@ void CartEngine::prepare (double newSampleRate, int)
     envelopeStep  = (float) (1.0 / (rate * DECLICK_MS * 0.001));
     releaseFrames = (juce::int64) (rate * DECLICK_MS * 0.001);
 
+    for (auto& voice : voices)
+        voice.gain.reset (rate, 0.02);
+
+    reset();
+}
+
+void CartEngine::reset()
+{
     // Nothing drains the FIFO while no device runs, so clicks made before this device
     // opened would otherwise all fire in the first block. Draining is the consumer's
-    // job and prepare() stands in for the callback, so this is race-free.
+    // job and prepare()/reset() stand in for the callback, so this is race-free.
     Command discard;
     while (commands.pop (discard)) {}
 
     for (auto& voice : voices)
-    {
-        voice.gain.reset (rate, 0.02);
         retire (voice);
-    }
 
     voiceCount.fill (0);
 
@@ -118,7 +128,7 @@ void CartEngine::handle (const Command& command)
             {
                 releaseOthersNotLooping (command.cartId);   // D2 revised: a new cart replaces the playing one, beds stay
                 releaseVoicesOf (command.cartId);           // restart: the old instance fades over DECLICK_MS
-                startVoice (command.cartId);
+                startVoice (command.cartId, command.ignoreLoop);
             }
             break;
 
@@ -137,7 +147,7 @@ void CartEngine::handle (const Command& command)
     }
 }
 
-void CartEngine::startVoice (int cartId)
+void CartEngine::startVoice (int cartId, bool ignoreLoop)
 {
     auto& cart = carts[(size_t) cartId];
     auto sample = cart.slot.acquire();
@@ -155,12 +165,14 @@ void CartEngine::startVoice (int cartId)
         voice.position = 0;
         voice.envelope = 0.0f;
         voice.releaseStep = envelopeStep;
+        voice.ignoreLoop = ignoreLoop;
         voice.phase = Voice::Phase::attack;
         voice.gain.setCurrentAndTargetValue (cart.gain.load());
 
         if (voiceCount[(size_t) cartId]++ == 0)
             cart.playing.store (true);
 
+        cart.startCount.fetch_add (1);
         cart.playhead.store (0);
         return;
     }
@@ -185,8 +197,17 @@ void CartEngine::releaseVoicesOf (int cartId)
 void CartEngine::releaseOthersNotLooping (int cartId)
 {
     for (auto& voice : voices)
-        if (voice.isActive() && voice.cartId != cartId && ! carts[(size_t) voice.cartId].loop.load())
-            beginRelease (voice, envelopeStep);
+    {
+        if (! voice.isActive() || voice.cartId == cartId)
+            continue;
+
+        // What spares a voice is looping, not the cart's flag: a voice started inside a
+        // sequence ignores that flag, so it is a one-shot and must give way like any other.
+        if (carts[(size_t) voice.cartId].loop.load() && ! voice.ignoreLoop)
+            continue;
+
+        beginRelease (voice, envelopeStep);
+    }
 }
 
 void CartEngine::releaseAll()
@@ -219,7 +240,7 @@ void CartEngine::renderVoice (Voice& voice, juce::AudioBuffer<float>& output, in
     auto& cart = carts[(size_t) voice.cartId];
     const auto& sample = *voice.sample;
     const auto length = sample.lengthFrames;
-    const bool loop = cart.loop.load();
+    const bool loop = cart.loop.load() && ! voice.ignoreLoop;
 
     voice.gain.setTargetValue (cart.gain.load());
 

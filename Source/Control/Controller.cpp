@@ -14,7 +14,7 @@ Controller::Controller (AudioEngine& engineToUse, SampleLoader& loaderToUse)
     preset.getState().addListener (this);
     resyncAll();
 
-    startTimer (1000);   // retire-list pruning (section 4)
+    startTimerHz (UI_REFRESH_HZ);   // sequence hand-over, and retire-list pruning (section 4)
 }
 
 Controller::~Controller()
@@ -69,6 +69,7 @@ juce::String Controller::getPresetName() const
 
 void Controller::replaceDocument (Preset newPreset, const juce::File& file)
 {
+    cancelSequence();
     engine.stopAll();
 
     preset.getState().removeListener (this);
@@ -119,6 +120,9 @@ void Controller::setVisiblePage (int page)
 
     if (page == visiblePage)
         return;
+
+    // A sequence belongs to the page it was started on, and that page is about to be unloaded.
+    cancelSequence();
 
     for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
         unloadCart (cartIdOf (visiblePage, cell));
@@ -241,26 +245,200 @@ void Controller::setLoop (int cartId, bool shouldLoop)
 //==============================================================================
 // Playback
 
-void Controller::trigger (int cartId)
+bool Controller::triggerInternal (int cartId, bool ignoreLoop)
 {
     // Nothing drains the FIFO while no device is open; queueing here would fire every
     // ignored click at once the moment the operator picks a device in Settings.
     if (! engine.hasOutputDevice())
-        return;
+        return false;
 
+    if (! isValidCart (cartId) || statuses[(size_t) cartId].state != CartState::ready)
+        return false;
+
+    return engine.getCartEngine().push ({ Command::Type::play, (juce::uint16) cartId, ignoreLoop });
+}
+
+bool Controller::canPlay() const
+{
+    return engine.hasOutputDevice();
+}
+
+void Controller::trigger (int cartId)
+{
+    // A pad pressed by hand takes over from any running sequence (section 11) - but only a pad
+    // that actually goes out. The play area takes every left click, empty pads included, and a
+    // click that makes no sound must not silently tear down a queue the operator is watching.
     if (isValidCart (cartId) && statuses[(size_t) cartId].state == CartState::ready)
-        engine.getCartEngine().push ({ Command::Type::play, (juce::uint16) cartId });
+        cancelSequence();
+
+    triggerInternal (cartId, false);
 }
 
 void Controller::stop (int cartId)
 {
+    // Section 11. Stopping the pad that is sounding ends the whole run - that is the panic
+    // button. Stopping one that is only waiting its turn takes it out of the queue and
+    // leaves the rest of the row alone, which is what the operator asked for and nothing more.
+    const int position = sequencePositionOf (cartId);
+
+    if (position == 0)
+        cancelSequence();
+    else if (position > 0)
+        removeFromSequence (cartId);
+
     if (isValidCart (cartId) && engine.hasOutputDevice())
         engine.getCartEngine().push ({ Command::Type::stop, (juce::uint16) cartId });
 }
 
 void Controller::stopAll()
 {
+    cancelSequence();
     engine.stopAll();
+}
+
+//==============================================================================
+void Controller::playSequence (int startCartId, Sequence kind)
+{
+    cancelSequence();
+
+    if (! isValidCart (startCartId) || ! engine.hasOutputDevice())
+        return;
+
+    const int page = pageOf (startCartId);
+    const int cell = cellOf (startCartId);
+    const int row = cell / GRID_COLS;
+    const int column = cell % GRID_COLS;
+    const int steps = kind == Sequence::row ? GRID_COLS : GRID_ROWS;
+    const int from = kind == Sequence::row ? column : row;
+
+    for (int i = from; i < steps; ++i)
+    {
+        const int id = cartIdOf (page, kind == Sequence::row ? row * GRID_COLS + i
+                                                             : i * GRID_COLS + column);
+
+        // Gaps do not end a sequence; they are simply passed over. A pad still decoding is
+        // kept: the queue is built the moment the operator asks, and by the time its turn
+        // comes it will normally be ready. startSequenceStep passes over it if it is not.
+        const auto state = statuses[(size_t) id].state;
+
+        if (state == CartState::ready || state == CartState::loading)
+            sequence.push_back (id);
+    }
+
+    if (sequence.empty())
+        return;
+
+    sequenceIndex = 0;
+    startSequenceStep();
+}
+
+void Controller::cancelSequence()
+{
+    sequence.clear();
+    sequenceIndex = -1;
+    stepStartCount = 0;
+    stepHasStarted = false;
+    stepPushed = false;
+    stepTicks = 0;
+}
+
+void Controller::removeFromSequence (int cartId)
+{
+    // Only what is still waiting: the step playing now is the caller's business, and what
+    // has already been played is history.
+    for (int i = (int) sequence.size() - 1; i > sequenceIndex; --i)
+        if (sequence[(size_t) i] == cartId)
+            sequence.erase (sequence.begin() + i);
+}
+
+void Controller::startSequenceStep()
+{
+    while (sequenceIndex >= 0 && sequenceIndex < (int) sequence.size())
+    {
+        const int id = sequence[(size_t) sequenceIndex];
+        const auto state = statuses[(size_t) id].state;
+
+        // Cleared, relocated or lost while it waited its turn: pass over it now rather than
+        // spend the timeout below waiting for a sound that cannot come.
+        if (state != CartState::ready && state != CartState::loading)
+        {
+            ++sequenceIndex;
+            continue;
+        }
+
+        stepStartCount = engine.getCartEngine().getStartCount (id);
+        stepHasStarted = false;
+        stepTicks = 0;
+        stepPushed = triggerInternal (id, true);   // true: Loop is ignored in a sequence
+        return;
+    }
+
+    cancelSequence();
+}
+
+void Controller::advanceSequence()
+{
+    if (sequenceIndex < 0)
+        return;
+
+    // With no device nothing will ever sound, and every remaining step would sit out its
+    // timeout in turn. End the run instead of leaving a queue lit over silence.
+    if (! engine.hasOutputDevice())
+    {
+        cancelSequence();
+        return;
+    }
+
+    const int current = sequence[(size_t) sequenceIndex];
+    const auto& cartEngine = engine.getCartEngine();
+
+    if (! stepHasStarted)
+    {
+        // The engine counts starts, so a pad shorter than one timer tick is still seen: the
+        // counter has moved even though `playing` went up and down between two polls. Waiting
+        // on `playing` alone would hang the queue on a two-frame bleep.
+        if (cartEngine.getStartCount (current) != stepStartCount)
+        {
+            stepHasStarted = true;
+        }
+        else
+        {
+            // Give up first: asking again on the very tick we abandon the step would leave a
+            // play command in the FIFO for a cart the queue has already walked past, and it
+            // would sound over the step that follows.
+            if (++stepTicks >= SEQUENCE_STEP_TIMEOUT_TICKS)
+            {
+                ++sequenceIndex;    // it never started; the rest of the row is not its hostage
+                startSequenceStep();
+                return;
+            }
+
+            // Still decoding, or the FIFO was full when we asked. Ask again only when we know
+            // the earlier attempt queued nothing, so this can never double-trigger a cart.
+            if (! stepPushed)
+                stepPushed = triggerInternal (current, true);
+
+            return;
+        }
+    }
+
+    if (cartEngine.isPlaying (current))
+        return;
+
+    ++sequenceIndex;
+    startSequenceStep();
+}
+
+int Controller::sequencePositionOf (int cartId) const
+{
+    if (sequenceIndex < 0)
+        return -1;
+
+    for (size_t i = (size_t) sequenceIndex; i < sequence.size(); ++i)
+        if (sequence[i] == cartId)
+            return (int) i - sequenceIndex;
+
+    return -1;
 }
 
 //==============================================================================
@@ -382,6 +560,7 @@ void Controller::valueTreeChildRemoved (juce::ValueTree& parent, juce::ValueTree
 
     if (child.hasType (ids::Page))
     {
+        cancelSequence();
         engine.stopAll();   // ids of the following pages shift (section 3)
 
         // Every later page shifts down by one, so without this the operator is left
@@ -414,7 +593,14 @@ void Controller::valueTreeChildRemoved (juce::ValueTree& parent, juce::ValueTree
 
 void Controller::timerCallback()
 {
-    engine.getCartEngine().pruneAll();
+    advanceSequence();
+
+    // Pruning is a once-a-second job; the timer runs fast so a sequence hands over promptly.
+    if (--pruneCountdown <= 0)
+    {
+        pruneCountdown = UI_REFRESH_HZ;
+        engine.getCartEngine().pruneAll();
+    }
 }
 
 void Controller::handleResult (const SampleLoader::Result& result)

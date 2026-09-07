@@ -6,19 +6,44 @@ namespace flowermachine
 {
 
 FlowerLookAndFeel::FlowerLookAndFeel()
-    : juce::LookAndFeel_V4 (juce::LookAndFeel_V4::ColourScheme {
-          palette::window,    // windowBackground
-          palette::panel,     // widgetBackground
-          palette::panel,     // menuBackground
-          palette::outline,   // outline
-          palette::text,      // defaultText
-          palette::control,   // defaultFill
-          palette::window,    // highlightedText
-          palette::accent,    // highlightedFill
-          palette::text       // menuText
-      })
+{
+    applyPalette();
+}
+
+void FlowerLookAndFeel::setTheme (juce::PropertiesFile& settings, palette::Theme theme)
+{
+    palette::save (settings, theme);
+    palette::apply (theme);
+
+    auto& current = juce::Desktop::getInstance().getDefaultLookAndFeel();
+
+    if (auto* ours = dynamic_cast<FlowerLookAndFeel*> (&current))
+    {
+        ours->applyPalette();
+
+        // Re-publishing the same pointer is what makes every live window, menu and dialog
+        // run lookAndFeelChanged() and repaint — including the few components that keep a
+        // colour of their own, which override the look-and-feel and would otherwise stay.
+        juce::Desktop::getInstance().setDefaultLookAndFeel (ours);
+    }
+}
+
+void FlowerLookAndFeel::applyPalette()
 {
     using namespace juce;
+
+    // First, because it rewrites a great many ids from the scheme; the overrides follow.
+    setColourScheme ({
+        palette::window,    // windowBackground
+        palette::panel,     // widgetBackground
+        palette::panel,     // menuBackground
+        palette::outline,   // outline
+        palette::text,      // defaultText
+        palette::control,   // defaultFill
+        palette::window,    // highlightedText
+        palette::accent,    // highlightedFill
+        palette::text       // menuText
+    });
 
     setDefaultSansSerifTypefaceName (palette::fontFamily());
 
@@ -45,7 +70,9 @@ FlowerLookAndFeel::FlowerLookAndFeel()
 
     setColour (PopupMenu::backgroundColourId,            palette::panel);
     setColour (PopupMenu::textColourId,                  palette::text);
-    setColour (PopupMenu::highlightedBackgroundColourId, palette::control);
+    // Not `control`: in the light scheme it sits within a few percent of `panel` and the
+    // highlighted item was indistinguishable from the rest of the menu.
+    setColour (PopupMenu::highlightedBackgroundColourId, palette::menuHighlight);
     setColour (PopupMenu::highlightedTextColourId,       palette::text);
 
     setColour (AlertWindow::backgroundColourId, palette::panel);
@@ -62,6 +89,15 @@ FlowerLookAndFeel::FlowerLookAndFeel()
     setColour (ListBox::backgroundColourId,        palette::cartEmpty);
     setColour (BubbleComponent::backgroundColourId, palette::panel);
     setColour (BubbleComponent::outlineColourId,   palette::outlineStrong);
+
+    // The gain knob's value bubble does NOT take its text colour from any BubbleComponent
+    // id: Slider's popup paints the value with TooltipWindow::textColourId. Left unset,
+    // that came from the scheme's highlighted text — near-black on a near-black bubble, so
+    // the number was there and simply could not be seen. The tooltip proper shares the id,
+    // so both are given the same dark panel and the same cream type.
+    setColour (TooltipWindow::backgroundColourId, palette::panel);
+    setColour (TooltipWindow::textColourId,       palette::text);
+    setColour (TooltipWindow::outlineColourId,    palette::outlineStrong);
     setColour (ToggleButton::textColourId,         palette::text);
     setColour (ToggleButton::tickColourId,         palette::accent);
 }
@@ -86,10 +122,14 @@ void FlowerLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& b
 
     auto fill = backgroundColour;
 
+    // Brightening a pale fill does almost nothing, so the light scheme's hover and press
+    // went unfelt. Move away from the fill's own brightness instead of always upwards.
+    const bool pale = fill.getPerceivedBrightness() > 0.5f;
+
     if (isButtonDown)
-        fill = fill.brighter (0.15f);
+        fill = pale ? fill.darker (0.12f) : fill.brighter (0.15f);
     else if (isMouseOverButton)
-        fill = fill.brighter (0.07f);
+        fill = pale ? fill.darker (0.06f) : fill.brighter (0.07f);
 
     g.setColour (fill);
     g.fillRoundedRectangle (bounds, radius);

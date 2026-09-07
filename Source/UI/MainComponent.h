@@ -22,11 +22,15 @@ namespace flowermachine
                           public juce::KeyListener
     {
     public:
-        MainComponent (Controller&, AudioEngine&, juce::PropertiesFile&);
+        /** @param presetToOpen  a preset named on the command line - the file association
+                                 route - which is opened instead of the last one used. */
+        MainComponent (Controller&, AudioEngine&, juce::PropertiesFile&,
+                       const juce::File& presetToOpen = {});
         ~MainComponent() override;
 
         void paint (juce::Graphics&) override;
         void resized() override;
+        void lookAndFeelChanged() override;
 
         /*  Two routes to the same shortcuts. A key press is delivered to the focused
             component and then walks UP its parents, so with nothing focused it reaches the
@@ -43,7 +47,12 @@ namespace flowermachine
             only be set once the component has a parent, i.e. after setContentOwned. */
         void refreshTitle();
 
+        /** Opens a preset the operator asked for from outside - double-clicking a .fmpreset
+            while the program is already running. Prompts about unsaved changes first. */
+        void openPresetFile (const juce::File&);
+
     private:
+        void applyPaletteColours();   // the few colours held here rather than in the LookAndFeel
         bool handleShortcut (const juce::KeyPress&);
         void showFileMenu();
         void newPreset();

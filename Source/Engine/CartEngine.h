@@ -44,6 +44,9 @@ namespace flowermachine
         //==============================================================================
         // Read by the UI at UI_REFRESH_HZ (lock-free)
         bool isPlaying (int cartId) const noexcept;
+
+        /** Monotonic count of voice starts on this cart; see CartRt::startCount. */
+        juce::uint32 getStartCount (int cartId) const noexcept;
         juce::int64 getPlayheadFrames (int cartId) const noexcept;
         juce::int64 getLengthFrames (int cartId) const noexcept;
         double getSampleRate() const noexcept { return sampleRate.load(); }   // 0 until a device runs
@@ -51,6 +54,11 @@ namespace flowermachine
         //==============================================================================
         // Audio thread
         void prepare (double newSampleRate, int maxBlockSize);
+
+        /** Silences everything and forgets every pending command. Called when the device
+            starts and again when it stops: a stopped device runs no callback, so without
+            this a cart that was sounding would stay flagged as playing for ever. */
+        void reset();
         void render (juce::AudioBuffer<float>& output, int startSample, int numSamples);   // adds into `output`
 
     private:
@@ -60,6 +68,13 @@ namespace flowermachine
             std::atomic<float> gain { 1.0f };
             std::atomic<bool> loop { false };
             std::atomic<bool> playing { false };
+
+            /*  Raised by one every time a voice starts on this cart. `playing` is a level and
+                the UI polls it 30 times a second, so a cart shorter than one poll can go up
+                and down unseen; this counter cannot be missed. A sequence uses it to tell
+                "the step has been and gone" from "the step never started".
+            */
+            std::atomic<juce::uint32> startCount { 0 };
             std::atomic<juce::int64> playhead { 0 };
             std::atomic<juce::int64> length { 0 };
         };
@@ -74,13 +89,14 @@ namespace flowermachine
             Phase phase = Phase::idle;
             float envelope = 0.0f;
             float releaseStep = 0.0f;   // per voice: the tail at the end of a file may be shorter than DECLICK_MS
+            bool ignoreLoop = false;    // set for a voice started as part of a sequence
             juce::SmoothedValue<float> gain;
 
             bool isActive() const noexcept { return phase != Phase::idle; }
         };
 
         void handle (const Command&);
-        void startVoice (int cartId);
+        void startVoice (int cartId, bool ignoreLoop);
         void beginRelease (Voice&, float step);
         void releaseVoicesOf (int cartId);
         void releaseOthersNotLooping (int cartId);

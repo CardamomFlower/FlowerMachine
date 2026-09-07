@@ -27,6 +27,20 @@ namespace flowermachine
     inline constexpr int COMMAND_FIFO_SIZE = 256;
     inline constexpr int UI_REFRESH_HZ     = 30;
 
+    // How long a sequence step waits to be heard before the queue passes over it (section 11).
+    // It covers a pad still decoding when its turn comes and a command the audio thread has
+    // not drained yet; a step that never starts must not hold the rest of the row for ever.
+    inline constexpr int SEQUENCE_STEP_TIMEOUT_MS    = 2000;
+    inline constexpr int SEQUENCE_STEP_TIMEOUT_TICKS = SEQUENCE_STEP_TIMEOUT_MS * UI_REFRESH_HZ / 1000;
+
+    // The window asks for this and settles for whatever the screen can give (section 7):
+    // the first release opened 1440x900 centred on a smaller work-PC screen, which put the
+    // title bar off the top and left nothing to grab.
+    inline constexpr int WINDOW_DEFAULT_W = 1440;
+    inline constexpr int WINDOW_DEFAULT_H = 900;
+    inline constexpr int WINDOW_MIN_W     = 720;
+    inline constexpr int WINDOW_MIN_H     = 540;
+
     inline constexpr int PRESET_SCHEMA_VERSION = 1;
 
     // Settings -> Test tone (section 4): a generated burst, no file involved.

@@ -17,6 +17,10 @@ namespace flowermachine
 
         Type type = Type::stopAll;
         juce::uint16 cartId = 0;
+
+        /** play only: this voice ignores the cart's Loop flag and ends at the end of the file.
+            A sequence needs it — a looping pad would otherwise hold the queue for ever. */
+        bool ignoreLoop = false;
     };
 
     /*  Single producer (message thread), single consumer (audio thread), fixed size. */

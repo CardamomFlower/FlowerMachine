@@ -65,6 +65,29 @@ namespace flowermachine
         bool popupPressed = false;
     };
 
+    /*  Stop and Loop as drawn marks rather than words.
+
+        Words have a floor a small button cannot pay: at the minimum window size the strip gives
+        each button about twenty pixels, and "STOP" collapsed to "S..." while "LOOP" became a bare
+        ellipsis. A filled square and a loop arrow stay themselves at any size. The button text is
+        still set, because the accessibility layer reads it; it is simply never painted.
+    */
+    class StripButton : public PopupAwareControl<juce::TextButton>
+    {
+    public:
+        enum class Symbol { stop, loop };
+
+        StripButton (Symbol symbolToDraw, const juce::String& name)
+            : PopupAwareControl<juce::TextButton> (name), symbol (symbolToDraw) {}
+
+        void paintButton (juce::Graphics&, bool isMouseOver, bool isMouseDown) override;
+
+    private:
+        const Symbol symbol;
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (StripButton)
+    };
+
     class CartButton : public juce::Component,
                        public juce::SettableTooltipClient
     {
@@ -79,10 +102,12 @@ namespace flowermachine
 
         void paint (juce::Graphics&) override;
         void resized() override;
+        void lookAndFeelChanged() override;
         void mouseDown (const juce::MouseEvent&) override;
         void mouseDoubleClick (const juce::MouseEvent&) override;
 
     private:
+        void applyPaletteColours();   // the few colours held here rather than in the LookAndFeel
         void showMenu();
         void chooseFile (bool relocate);
         void renameCart();
@@ -98,8 +123,8 @@ namespace flowermachine
         const int cell;
         int cartId;
 
-        PopupAwareControl<juce::TextButton> stopButton { "STOP" };
-        PopupAwareControl<juce::TextButton> loopButton { "LOOP" };
+        StripButton stopButton { StripButton::Symbol::stop, "Stop" };
+        StripButton loopButton { StripButton::Symbol::loop, "Loop" };
         PopupAwareControl<juce::Slider> gainSlider;
         std::unique_ptr<juce::FileChooser> chooser;
 
@@ -110,6 +135,7 @@ namespace flowermachine
         juce::Colour colour;
         bool playing = false;
         float progress = 0.0f;
+        int queuePosition = -1;   // place in a running sequence: -1 none, 0 playing, 1.. waiting
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CartButton)
     };

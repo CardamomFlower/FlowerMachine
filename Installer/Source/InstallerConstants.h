@@ -12,7 +12,7 @@
 namespace flowerinstall
 {
     inline constexpr const char* APP_NAME       = "FlowerMachine";
-    inline constexpr const char* APP_VERSION    = "0.1.0";   // must match FlowerMachine.jucer
+    inline constexpr const char* APP_VERSION    = "0.2.0";   // must match FlowerMachine.jucer
     inline constexpr const char* PUBLISHER      = "Cardamom Tools";
     inline constexpr const char* WEBSITE        = "https://github.com/CardamomFlower/Flower";
 

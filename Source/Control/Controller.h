@@ -4,6 +4,7 @@
 
 #include <array>
 #include <functional>
+#include <vector>
 
 #include "../Constants.h"
 #include "../Engine/AudioEngine.h"
@@ -68,6 +69,25 @@ namespace flowermachine
         void stopAll();
 
         //==============================================================================
+        /*  Sequences (ARCHITECTURE.md section 11): play a row or a column in order, starting
+            at a chosen pad. Empty and unloaded pads are skipped; Loop is ignored, so a
+            looping pad cannot hold the queue for ever. Stopping the pad that is playing, or
+            triggering anything by hand, ends the whole sequence.
+        */
+        enum class Sequence { row, column };
+
+        void playSequence (int startCartId, Sequence);
+        void cancelSequence();
+
+        /** False while no output device is open. A sequence started then would light its
+            whole queue and never play a note, so the menu offers it greyed out instead. */
+        bool canPlay() const;
+
+        /** -1 when the cart is not in the running sequence, 0 when it is the one playing,
+            and its place in the queue otherwise. */
+        int sequencePositionOf (int cartId) const;
+
+        //==============================================================================
         // Status
         const CartStatus& getStatus (int cartId) const;
 
@@ -93,6 +113,14 @@ namespace flowermachine
         void timerCallback() override;
         void handleResult (const SampleLoader::Result&);
         void handleDeviceChanged();
+
+        /** @returns true when the play command actually reached the FIFO. False means nothing
+                     was queued - no device, the cart not ready, or the FIFO full - and the
+                     caller must not wait for a sound that is never coming. */
+        bool triggerInternal (int cartId, bool ignoreLoop);
+        void startSequenceStep();
+        void advanceSequence();
+        void removeFromSequence (int cartId);
 
         void replaceDocument (Preset newPreset, const juce::File& file);
         void resyncAll();
@@ -124,6 +152,14 @@ namespace flowermachine
         int visiblePage = 0;
 
         std::array<CartStatus, MAX_CARTS> statuses;
+
+        std::vector<int> sequence;        // cart ids in play order; empty when none is running
+        int sequenceIndex = -1;           // which of them is playing, -1 for none
+        juce::uint32 stepStartCount = 0;  // the cart's engine start counter when the step was asked for
+        bool stepHasStarted = false;      // the engine has been seen to start this step
+        bool stepPushed = false;          // the play command reached the FIFO; false means ask again
+        int stepTicks = 0;                // timer ticks spent waiting for this step to start
+        int pruneCountdown = 0;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Controller)
     };

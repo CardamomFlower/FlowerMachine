@@ -33,7 +33,8 @@ namespace
 }
 
 //==============================================================================
-MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineToUse, juce::PropertiesFile& settingsToUse)
+MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineToUse,
+                              juce::PropertiesFile& settingsToUse, const juce::File& presetToOpen)
     : controller (controllerToUse),
       engine (engineToUse),
       settings (settingsToUse),
@@ -46,7 +47,6 @@ MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineTo
 
     addAndMakeVisible (presetLabel);
     presetLabel.setFont (palette::font (18.0f, palette::Weight::semibold));
-    presetLabel.setColour (juce::Label::textColourId, palette::text);
     presetLabel.setJustificationType (juce::Justification::centredLeft);
     presetLabel.setBorderSize (juce::BorderSize<int> (0));
 
@@ -54,8 +54,6 @@ MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineTo
     settingsButton.onClick = [this] { SettingsComponent::show (this, engine, settings); };
 
     addAndMakeVisible (stopAllButton);
-    stopAllButton.setColour (juce::TextButton::buttonColourId, palette::danger);
-    stopAllButton.setColour (juce::TextButton::textColourOffId, palette::dangerText);
     stopAllButton.onClick = [this] { controller.stopAll(); };
 
     addAndMakeVisible (pageStrip);
@@ -71,9 +69,10 @@ MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineTo
 
     addAndMakeVisible (statusLabel);
     statusLabel.setFont (palette::font (12.0f));
-    statusLabel.setColour (juce::Label::textColourId, palette::text2);
     statusLabel.setJustificationType (juce::Justification::centredLeft);
     statusLabel.setBorderSize (juce::BorderSize<int> (0));
+
+    applyPaletteColours();
 
     controller.onPagesChanged = [this] { rebuildPages(); };
     controller.onDocumentChanged = [this] { refreshTitle(); };
@@ -83,11 +82,21 @@ MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineTo
     recentFiles.setMaxNumberOfItems (maxRecentPresets);
     recentFiles.restoreFromString (settings.getValue (recentPresetsKey));
 
-    setSize (1440, 900);
+    // What it would like; the window shrinks this to whatever the screen can actually show.
+    setSize (WINDOW_DEFAULT_W, WINDOW_DEFAULT_H);
 
     rebuildPages();
     refreshTitle();
     rendererEnforcer.start();
+
+    // A preset named on the command line wins over the last one used: the operator
+    // double-clicked that file and reopening the other first would load a whole page for
+    // nothing (section 3).
+    if (presetToOpen.existsAsFile())
+    {
+        openFile (presetToOpen);
+        return;
+    }
 
     // reopen the last preset (section 3)
     const auto lastPath = settings.getValue (lastPresetKey);
@@ -106,6 +115,22 @@ MainComponent::~MainComponent()
     controller.onDocumentChanged = nullptr;
     controller.onCartChanged = nullptr;
     controller.onDeviceChanged = nullptr;
+}
+
+void MainComponent::applyPaletteColours()
+{
+    // A colour set on the component beats the look-and-feel's table, so these have to be
+    // written again whenever the scheme changes.
+    presetLabel.setColour (juce::Label::textColourId, palette::text);
+    statusLabel.setColour (juce::Label::textColourId, palette::text2);
+    stopAllButton.setColour (juce::TextButton::buttonColourId, palette::danger);
+    stopAllButton.setColour (juce::TextButton::textColourOffId, palette::dangerText);
+}
+
+void MainComponent::lookAndFeelChanged()
+{
+    applyPaletteColours();
+    rebuildPages();   // the tab strip caches the background colour it was built with
 }
 
 //==============================================================================
@@ -254,6 +279,18 @@ void MainComponent::openPreset()
                                         if (safe != nullptr && file.existsAsFile())
                                             safe->openFile (file);
                                     });
+    });
+}
+
+void MainComponent::openPresetFile (const juce::File& file)
+{
+    if (! file.existsAsFile())
+        return;
+
+    confirmDiscard ([safe = juce::Component::SafePointer<MainComponent> (this), file]
+    {
+        if (safe != nullptr)
+            safe->openFile (file);
     });
 }
 

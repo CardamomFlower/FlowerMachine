@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "Palette.h"
+
 namespace flowermachine
 {
     /*  Shared look for every stock widget (ARCHITECTURE.md section 6), after the
@@ -12,6 +14,14 @@ namespace flowermachine
     {
     public:
         FlowerLookAndFeel();
+
+        /** Rewrites every colour from whatever scheme `palette` currently holds.
+            The tables here are copies, so they do not follow a palette change by themselves. */
+        void applyPalette();
+
+        /** Message thread: switch the scheme, remember it, and repaint everything on screen —
+            including the components that cache a colour of their own. */
+        static void setTheme (juce::PropertiesFile&, palette::Theme);
 
         juce::Font getTextButtonFont (juce::TextButton&, int buttonHeight) override;
         void drawButtonBackground (juce::Graphics&, juce::Button&, const juce::Colour& backgroundColour,

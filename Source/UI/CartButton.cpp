@@ -78,18 +78,72 @@ namespace
 }
 
 //==============================================================================
+void StripButton::paintButton (juce::Graphics& g, bool isMouseOver, bool isMouseDown)
+{
+    const bool lit = getToggleState();
+
+    getLookAndFeel().drawButtonBackground (g, *this,
+                                           findColour (lit ? juce::TextButton::buttonOnColourId
+                                                           : juce::TextButton::buttonColourId),
+                                           isMouseOver, isMouseDown);
+
+    const auto inset = (float) juce::jlimit (2, 6, juce::roundToInt (getHeight() * 0.22f));
+    const auto area = getLocalBounds().toFloat().reduced (inset);
+    const float size = juce::jmin (area.getWidth(), area.getHeight());
+
+    if (size < 3.0f)
+        return;
+
+    const auto box = area.withSizeKeepingCentre (size, size);
+
+    // The same choice drawButtonText would have made, so the mark is dark on the lit amber
+    // pill and cream on the unlit one.
+    g.setColour (findColour (lit ? juce::TextButton::textColourOnId
+                                 : juce::TextButton::textColourOffId));
+
+    if (symbol == Symbol::stop)
+    {
+        g.fillRoundedRectangle (box, juce::jmax (1.0f, size * 0.15f));
+        return;
+    }
+
+    // Loop: a ring left open at the top right, closed by an arrowhead riding the tangent.
+    const float stroke = juce::jmax (1.25f, size * 0.16f);
+    const float radius = (size - stroke) * 0.5f;
+    const auto centre = box.getCentre();
+    const float gapStart = juce::degreesToRadians (40.0f);
+    const float gapEnd = juce::degreesToRadians (330.0f);
+
+    juce::Path ring;
+    ring.addCentredArc (centre.x, centre.y, radius, radius, 0.0f, gapStart, gapEnd, true);
+    g.strokePath (ring, juce::PathStrokeType (stroke, juce::PathStrokeType::curved,
+                                              juce::PathStrokeType::butt));
+
+    // getPointOnCircumference measures clockwise from twelve o'clock, and a rotation by the
+    // same angle turns local +x onto the clockwise tangent there — so the head points the way
+    // the ring travels.
+    const auto tip = centre.getPointOnCircumference (radius, gapStart);
+    const float head = juce::jmax (2.5f, size * 0.34f);
+
+    juce::Path arrow;
+    arrow.addTriangle (-head * 0.5f, -head * 0.55f,
+                        head * 0.5f, 0.0f,
+                       -head * 0.5f, head * 0.55f);
+    arrow.applyTransform (juce::AffineTransform::rotation (gapStart).translated (tip.x, tip.y));
+    g.fillPath (arrow);
+}
+
+//==============================================================================
 CartButton::CartButton (int cellIndex, Controller& controllerToUse, const CartEngine& engineToRead)
     : controller (controllerToUse), engine (engineToRead), cell (cellIndex), cartId (cellIndex)
 {
     const auto openMenu = [this] { showMenu(); };
 
     addChildComponent (stopButton);
-    stopButton.setColour (juce::TextButton::buttonColourId, palette::cartControl);
     stopButton.onClick = [this] { controller.stop (cartId); };
     stopButton.onPopupMenu = openMenu;
 
     addChildComponent (loopButton);
-    loopButton.setColour (juce::TextButton::buttonColourId, palette::cartControl);
     loopButton.setClickingTogglesState (true);
     loopButton.onClick = [this] { controller.setLoop (cartId, loopButton.getToggleState()); };
     loopButton.onPopupMenu = openMenu;
@@ -103,8 +157,25 @@ CartButton::CartButton (int cellIndex, Controller& controllerToUse, const CartEn
     gainSlider.setValue (0.0, juce::dontSendNotification);
     gainSlider.setDoubleClickReturnValue (true, 0.0);
     gainSlider.setTextValueSuffix (" dB");
-    gainSlider.setPopupDisplayEnabled (true, false, this);
+    // No parent: the bubble goes on the desktop rather than inside the cart, so it is not
+    // clipped by a pad at the edge of the board and stays readable on a small one.
+    gainSlider.setPopupDisplayEnabled (true, false, nullptr);
     gainSlider.onValueChange = [this] { controller.setGainDb (cartId, (float) gainSlider.getValue()); };
+
+    applyPaletteColours();
+}
+
+void CartButton::applyPaletteColours()
+{
+    // A colour set on the component beats the look-and-feel's table, so these have to be
+    // written again whenever the scheme changes.
+    stopButton.setColour (juce::TextButton::buttonColourId, palette::cartControl);
+    loopButton.setColour (juce::TextButton::buttonColourId, palette::cartControl);
+}
+
+void CartButton::lookAndFeelChanged()
+{
+    applyPaletteColours();
 }
 
 void CartButton::setCartId (int newCartId)
@@ -148,10 +219,13 @@ void CartButton::refresh()
     if (std::abs (gainSlider.getValue() - status.gainDb) > 0.01)
         gainSlider.setValue (status.gainDb, juce::dontSendNotification);
 
+    const int nowQueued = controller.sequencePositionOf (cartId);
+
     const bool changed = state != status.state
                       || title != status.title
                       || colour != status.colour
                       || playing != nowPlaying
+                      || queuePosition != nowQueued
                       || timeText != newTime
                       || std::abs (progress - newProgress) > 0.002f;
 
@@ -175,6 +249,7 @@ void CartButton::refresh()
     title = status.title;
     colour = status.colour;
     playing = nowPlaying;
+    queuePosition = nowQueued;
     timeText = newTime;
     progress = newProgress;
     repaint();
@@ -183,7 +258,10 @@ void CartButton::refresh()
 //==============================================================================
 int CartButton::stripHeight() const
 {
-    return juce::jlimit (22, 34, juce::roundToInt (getHeight() * 0.306f));   // 26 at the design's 85 px cell
+    // 26 at the design's 85 px cell. The floor came down from 22 once the controls became
+    // marks instead of words: a square and a ring read at ten pixels, where "STOP" did not,
+    // and the height that buys goes to the title.
+    return juce::jlimit (20, 34, juce::roundToInt (getHeight() * 0.306f));
 }
 
 juce::Rectangle<int> CartButton::playArea() const
@@ -204,10 +282,12 @@ void CartButton::resized()
     gainSlider.setBounds (strip.removeFromRight (controlHeight));
     strip.removeFromRight (4);
 
-    const int buttonWidth = juce::jmax (24, (strip.getWidth() - 4) / 2);
+    // An even split, with no minimum: a mark has no word length to protect, and the old
+    // 24 px floor was what starved Loop down to an ellipsis on a narrow board.
+    const int buttonWidth = juce::jmax (1, (strip.getWidth() - 4) / 2);
     stopButton.setBounds (strip.removeFromLeft (buttonWidth));
     strip.removeFromLeft (4);
-    loopButton.setBounds (strip.removeFromLeft (juce::jmin (buttonWidth, strip.getWidth())));
+    loopButton.setBounds (strip);
 }
 
 //==============================================================================
@@ -234,7 +314,16 @@ void CartButton::showMenu()
     const bool assigned = state != CartState::empty;
     const bool broken = state == CartState::missing || state == CartState::error;
 
+    const bool ready = state == CartState::ready;
+
     juce::PopupMenu menu;
+    // Without a device the run would light its whole queue over silence, so it is offered
+    // greyed out rather than as a button that does nothing.
+    const bool canSequence = ready && controller.canPlay();
+
+    menu.addItem (6, "Play row from here", canSequence);
+    menu.addItem (7, "Play column from here", canSequence);
+    menu.addSeparator();
     menu.addItem (1, "Assign file...");
     menu.addItem (2, "Rename...", assigned);
     menu.addItem (3, "Colour...", assigned);
@@ -255,6 +344,8 @@ void CartButton::showMenu()
                                 case 3: safe->chooseColour(); break;
                                 case 4: safe->chooseFile (true); break;
                                 case 5: safe->controller.clearCart (safe->cartId); break;
+                                case 6: safe->controller.playSequence (safe->cartId, Controller::Sequence::row); break;
+                                case 7: safe->controller.playSequence (safe->cartId, Controller::Sequence::column); break;
                                 default: break;
                             }
                         });
@@ -353,6 +444,18 @@ void CartButton::paint (juce::Graphics& g)
     g.setColour (line);
     g.drawRoundedRectangle (bounds.reduced (lineWidth * 0.5f), radius, lineWidth);
 
+    // Waiting its turn in a sequence: an accent edge and a dot, so the operator can see what
+    // is about to go out before it does (section 11).
+    if (queuePosition > 0)
+    {
+        g.setColour (accent.withAlpha (0.65f));
+        g.drawRoundedRectangle (bounds.reduced (1.0f), radius, 1.5f);
+
+        const float dot = juce::jlimit (4.0f, 7.0f, bounds.getHeight() * 0.09f);
+        g.setColour (accent);
+        g.fillEllipse (bounds.getRight() - dot - 5.0f, bounds.getY() + 5.0f, dot, dot);
+    }
+
     if (state == CartState::empty)
     {
         g.setColour (text3);
@@ -366,22 +469,36 @@ void CartButton::paint (juce::Graphics& g)
     if (showBand)
         content.removeFromTop ((int) bandHeight);
 
-    content = content.reduced (10, 0);
-    content.removeFromTop (5);
-    content.removeFromBottom (3);
+    // Padding gives way on a small board, or there is nothing left to write in. Every
+    // reservation below grows a pixel at a time rather than in one step: a step takes more
+    // room than the pixel that triggered it, so the pad would lose text as it got bigger.
+    const int padX = juce::jlimit (6, 10, getWidth() / 16);
+    const int padTop = juce::jlimit (2, 5, (content.getHeight() - 30) / 6);
 
-    if (playing)
+    content = content.reduced (padX, 0);
+    content.removeFromTop (padTop);
+    content.removeFromBottom (2);
+
+    // The progress strip is reserved whether or not the cart is sounding: taking it only
+    // while playing made a cart re-flow its text on the downbeat. It fades in with the cart
+    // instead of appearing whole, because six pixels taken at one height is the same trap.
+    const int barHeight = juce::jlimit (0, 3, content.getHeight() - 11);
+    const int barGap    = juce::jlimit (0, 3, content.getHeight() - 14);
+
+    content.removeFromBottom (barGap);
+    const auto bar = content.removeFromBottom (barHeight);
+
+    if (playing && barHeight > 0)
     {
-        auto bar = content.removeFromBottom (3).toFloat();
+        const auto barF = bar.toFloat();
         g.setColour (text.withAlpha (0.15f));
-        g.fillRoundedRectangle (bar, 1.5f);
+        g.fillRoundedRectangle (barF, 1.5f);
         g.setColour (accent);
-        g.fillRoundedRectangle (bar.withWidth (juce::jmax (2.0f, bar.getWidth() * progress)), 1.5f);
-        content.removeFromBottom (4);
+        g.fillRoundedRectangle (barF.withWidth (juce::jmax (2.0f, barF.getWidth() * progress)), 1.5f);
     }
 
-    const float titleSize = juce::jlimit (12.0f, 18.0f, getHeight() * 0.175f);
-    const float timeSize  = juce::jlimit (11.0f, 15.0f, getHeight() * 0.155f);
+    const float titleSize = juce::jlimit (9.0f, 18.0f, getHeight() * 0.175f);
+    const float timeSize  = juce::jlimit (9.0f, 15.0f, getHeight() * 0.155f);
 
     juce::String bottomLine = timeText;
     juce::Colour bottomColour = text2;
@@ -404,13 +521,26 @@ void CartButton::paint (juce::Graphics& g)
         case CartState::ready:    break;
     }
 
-    g.setColour (bottomColour);
-    g.setFont (font (timeSize, bottomWeight));
-    g.drawText (bottomLine, content.removeFromBottom (juce::roundToInt (timeSize) + 2), juce::Justification::bottomLeft, false);
+    // Two lines need the room for two lines. When there is only room for one it is the title
+    // that stays: the duration is a detail, the name is which cart this is.
+    const bool roomForBoth = content.getHeight() >= juce::roundToInt (titleSize + timeSize) + 5;
+
+    if (roomForBoth && bottomLine.isNotEmpty())
+    {
+        g.setColour (bottomColour);
+        g.setFont (font (timeSize, bottomWeight));
+        g.drawText (bottomLine, content.removeFromBottom (juce::roundToInt (timeSize) + 2),
+                    juce::Justification::bottomLeft, false);
+    }
+
+    if (content.getHeight() <= 0)
+        return;
 
     g.setColour (titleColour);
-    g.setFont (font (titleSize, Weight::semibold));
-    g.drawText (title, content, juce::Justification::topLeft, true);
+    g.setFont (font (juce::jmin (titleSize, (float) juce::jmax (8, content.getHeight() - 1)),
+                     Weight::semibold));
+    g.drawText (title, content, roomForBoth ? juce::Justification::topLeft
+                                            : juce::Justification::centredLeft, true);
 }
 
 //==============================================================================

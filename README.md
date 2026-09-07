@@ -9,7 +9,8 @@ Sixty-four pads to a page, up to sixteen pages, switched with tabs.
 Click a pad and it plays. Click it again and it starts over. Starting a pad
 stops whatever else was playing, so one sound follows another cleanly — except
 for a pad set to **Loop**, which keeps running underneath until you stop it
-yourself or hit **STOP ALL**.
+yourself or hit **STOP ALL**. A whole row or column can be played in order from
+one right-click, for a run of stings or a bed of adverts.
 
 Useful anywhere a sound has to land on cue and not a second later: a radio show,
 a podcast, a theatre, a stream, a live set, a rehearsal room.
@@ -46,7 +47,27 @@ a double-click puts back to zero. While it plays it shows the time remaining
 and a progress bar. The colour band along the top is yours to use however you
 like: by kind, by segment, by whoever is on next.
 
-Right-click a pad for the rest.
+Right-click a pad for the rest. The same menu plays a whole **row** or
+**column** in sequence, starting from that pad and stopping at the edge of the
+grid. Each sound starts a short moment after the one before it ends — the queue
+is watched thirty times a second, so it is a quick hand-over and not a butt
+join; if two sounds have to run together, put the join inside one file. The
+pads still to come are outlined and carry a dot, so you can see what is queued
+before it goes out.
+
+The queue is settled the moment you start it: empty pads, missing pads and pads
+that failed to load are left out, and one you clear or point somewhere else
+while it waits is passed over rather than waited for. Deleting the audio file
+itself mid-run changes nothing — a loaded pad plays from memory. **Loop** is ignored
+inside a sequence, so a looping pad plays once and hands on — the toggle itself
+is untouched, and clicking that pad on its own still loops. A bed you started
+by hand before the sequence keeps running underneath it.
+
+The run ends when you press Stop on the pad that is sounding, press **STOP
+ALL**, click a loaded pad by hand, change page, or open another preset. A click
+on an empty or missing pad starts nothing and so ends nothing. Pressing
+Stop on a pad that is only waiting its turn drops that one from the queue and
+leaves the rest running. Only one sequence runs at a time.
 
 ![A pad playing, and the pad menu](assets/cart-menu.png)
 
@@ -60,8 +81,13 @@ Each pad remembers both where its file is and where it sits relative to the
 preset, so moving a preset together with its audio folder keeps everything
 working - useful when the machine you prepare on and the machine you play from
 are not the same. If a file has genuinely gone, the pad is marked **missing**
-and keeps its name and colour so you can see what is absent; **Relocate…**
-points it at the file again. A preset always opens, whatever is missing.
+and keeps its name so you can see what is absent; **Relocate…** points it at
+the file again. Missing files never stop a preset from opening; only a file
+that is damaged or not a preset at all is refused.
+
+Double-clicking a `.fmpreset` in Explorer opens it, whether FlowerMachine is
+running or not; only one copy runs at a time, so the file goes to the window
+you already have.
 
 Only the page you are looking at is held in memory, so a set with many pages
 does not fill the machine. A pad already playing carries on to the end.
@@ -77,10 +103,12 @@ Files are decoded to memory when a page opens, so a click reaches the output
 immediately rather than waiting on the disk.
 
 **Settings** picks the output device and has a test tone for checking the
-routing before you start. It also carries a **Renderer** switch: if the window
-will not draw properly on an older graphics driver, change it from Direct2D to
-Software. If it will not draw at all, start the program once as
-`FlowerMachine.exe --software-renderer` and change it there.
+routing before you start. It also holds **Colours** — dark or light, switched
+without restarting and remembered — and a **Renderer** switch: if the window will not draw
+properly on an older graphics driver, change it from Direct2D to Software. If
+it will not draw at all, start the program once as
+`FlowerMachine.exe --software-renderer`, which forces Software for that run;
+set the switch there and it holds from the next start on.
 
 ## Building from source
 

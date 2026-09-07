@@ -70,7 +70,11 @@ namespace flowermachine
             explicit Source (AudioEngine& ownerToUse) : owner (ownerToUse) {}
 
             void prepareToPlay (int samplesPerBlockExpected, double newSampleRate) override;
-            void releaseResources() override {}
+            /*  The device has stopped: no callback will run again until prepareToPlay, so
+                anything still flagged as sounding would stay flagged for ever — the grid would
+                show playing pads and a sequence would wait for a step that can never end.
+            */
+            void releaseResources() override { owner.cartEngine.reset(); }
             void getNextAudioBlock (const juce::AudioSourceChannelInfo& info) override;
 
             AudioEngine& owner;

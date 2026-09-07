@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="FlwrSt" name="FlowerMachineSetup" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="0.1.0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="0.2.0"
               companyName="Cardamom Tools" companyCopyright="(C) 2026 Cardamom Tools"
               companyWebsite="www.cardamomflower.dev" bundleIdentifier="com.cardamomtools.flowermachinesetup"
               cppLanguageStandard="17">

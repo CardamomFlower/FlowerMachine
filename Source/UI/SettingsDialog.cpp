@@ -1,6 +1,8 @@
 #include "SettingsDialog.h"
 
 #include "../Constants.h"
+#include "FlowerLookAndFeel.h"
+#include "Palette.h"
 #include "Renderer.h"
 
 namespace flowermachine
@@ -33,7 +35,9 @@ SettingsComponent::SettingsComponent (AudioEngine& engineToUse, juce::Properties
     rendererBox.addItem ("Software", 2);
     rendererBox.setSelectedId (renderer::load (settings) == renderer::Choice::software ? 2 : 1,
                                juce::dontSendNotification);
-    rendererBox.setEnabled (! renderer::forcedSoftware);
+    // Deliberately left usable while --software-renderer is in force: that flag is how the
+    // operator gets a window at all on a PC that will not paint, and it would be the one run
+    // in which they could not make the setting stick.
     rendererBox.onChange = [this]
     {
         const auto choice = rendererBox.getSelectedId() == 2 ? renderer::Choice::software
@@ -42,10 +46,22 @@ SettingsComponent::SettingsComponent (AudioEngine& engineToUse, juce::Properties
         renderer::applyToAllWindows (renderer::effective (settings));
     };
 
+    addAndMakeVisible (themeLabel);
+    addAndMakeVisible (themeBox);
+    themeBox.addItem ("Dark", 1);
+    themeBox.addItem ("Light", 2);
+    themeBox.setSelectedId (palette::load (settings) == palette::Theme::light ? 2 : 1,
+                            juce::dontSendNotification);
+    themeBox.onChange = [this]
+    {
+        FlowerLookAndFeel::setTheme (settings, themeBox.getSelectedId() == 2 ? palette::Theme::light
+                                                                            : palette::Theme::dark);
+    };
+
     addAndMakeVisible (rendererNote);
     rendererNote.setFont (juce::Font (juce::FontOptions (12.0f)));
     rendererNote.setText (renderer::forcedSoftware
-                              ? "Forced to Software by --software-renderer for this run."
+                              ? "Software for this run (--software-renderer). The choice here applies from the next start."
                               : "Choose Software if the window does not paint correctly on this PC.",
                           juce::dontSendNotification);
 
@@ -73,6 +89,9 @@ void SettingsComponent::resized()
     auto rendererRow = r.removeFromTop (28);
     rendererLabel.setBounds (rendererRow.removeFromLeft (90));
     rendererBox.setBounds (rendererRow.removeFromLeft (220));
+    rendererRow.removeFromLeft (24);
+    themeLabel.setBounds (rendererRow.removeFromLeft (70));
+    themeBox.setBounds (rendererRow.removeFromLeft (140));
     r.removeFromTop (4);
     rendererNote.setBounds (r.removeFromTop (22));
     r.removeFromTop (18);

@@ -38,6 +38,8 @@ namespace flowermachine
         juce::Label rendererLabel { {}, "Renderer" };
         juce::ComboBox rendererBox;
         juce::Label rendererNote;
+        juce::Label themeLabel { {}, "Colours" };
+        juce::ComboBox themeBox;
         juce::Label aboutLabel;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SettingsComponent)
