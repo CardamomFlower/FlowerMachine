@@ -2,7 +2,7 @@
 
 #include <JuceHeader.h>
 
-/*  "Tarantella Cardamom" — an original tune, written for this installer.
+/*  "Tarantella Cardamom" - an original tune, written for this installer.
 
     Four channels, the way a tracker would have it: two pulse waves, a triangle bass
     and a noise channel standing in for the tambourine. Six rows to the bar, because
@@ -36,7 +36,7 @@ namespace flowerinstall::tune
 
     enum Channel { lead = 0, harmony, bass, percussion };
 
-    // Pattern 0 — the tune.
+    // Pattern 0 - the tune.
     constexpr Cell leadA[PATTERN_ROWS] =
     {
         {69}, {71}, {72},  {76}, {74}, {72},      // A B C  | E D C
@@ -49,7 +49,7 @@ namespace flowerinstall::tune
         {69}, {NIL}, {NIL}, {64}, {NIL}, {OFF},   // A . .  | E . -
     };
 
-    // Pattern 1 — the answer: the same shape, higher and busier.
+    // Pattern 1 - the answer: the same shape, higher and busier.
     constexpr Cell leadB[PATTERN_ROWS] =
     {
         {81}, {83}, {84},  {88}, {86}, {84},

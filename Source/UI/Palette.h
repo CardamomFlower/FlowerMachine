@@ -10,7 +10,7 @@
     eighty-odd places that say `palette::accent` did not have to change: assigning a new
     scheme writes through the same storage and everything that paints afterwards sees it.
 
-    What does NOT follow by itself is anything that copied a colour once — the LookAndFeel's
+    What does NOT follow by itself is anything that copied a colour once - the LookAndFeel's
     tables and the handful of per-component setColour calls. Those are re-applied from
     FlowerLookAndFeel::applyPalette and from each component's lookAndFeelChanged().
 

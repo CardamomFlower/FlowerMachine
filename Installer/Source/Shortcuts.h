@@ -13,8 +13,8 @@ namespace flowerinstall::shortcuts
 
     /** Writes a .lnk.
 
-        juce::File::createShortcut exists but sets only the path and the description —
-        no working directory, no icon, no show command — and leaks a COM apartment
+        juce::File::createShortcut exists but sets only the path and the description -
+        no working directory, no icon, no show command - and leaks a COM apartment
         reference per call, so this does the IShellLink work directly.
 
         @param linkFile     the .lnk to create, parent directories included

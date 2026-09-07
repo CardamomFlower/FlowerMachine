@@ -34,7 +34,7 @@ namespace
             return false;
         }
 
-        return true;   // taken, or Windows would not say — both mean "do not overwrite"
+        return true;   // taken, or Windows would not say - both mean "do not overwrite"
     }
 }
 

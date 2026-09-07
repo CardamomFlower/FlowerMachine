@@ -60,7 +60,7 @@ desktop.ini
 .claude/
 
 # ============================================================
-#  Installer payload — repacked from the built exe by
+#  Installer payload - repacked from the built exe by
 #  Installer/pack-payload.py, never committed
 # ============================================================
 Installer/Payload/FlowerMachine_payload.bin

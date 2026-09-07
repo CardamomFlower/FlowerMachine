@@ -15,7 +15,7 @@ namespace flowerinstall
 
         /*  True on purpose. With single-instance behaviour, launching the uninstaller
             while a setup window happened to be open made the second process exit without
-            a word — so uninstalling from Settings > Apps looked like it simply did
+            a word - so uninstalling from Settings > Apps looked like it simply did
             nothing. Two setup windows are harmless: the install is idempotent, and both
             halves refuse to run while FlowerMachine itself is open. */
         bool moreThanOneInstanceAllowed() override          { return true; }

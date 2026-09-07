@@ -23,7 +23,7 @@ void CartEngine::unload (int cartId)
 
     auto& cart = carts[(size_t) cartId];
     cart.length.store (0);
-    cart.slot.unload();   // publish (nullptr) alone would free nothing — see SampleSlot.h
+    cart.slot.unload();   // publish (nullptr) alone would free nothing - see SampleSlot.h
 }
 
 void CartEngine::pruneAll()

@@ -11,7 +11,7 @@
 namespace flowermachine
 {
     /*  One cart (ARCHITECTURE.md section 6), drawn after the design canvas: a play
-        area (colour band, title, time, progress) plus three child controls —
+        area (colour band, title, time, progress) plus three child controls -
         STOP, LOOP, Gain. The children take their own clicks; only the play area
         triggers. Right-click opens the cart menu.
     */

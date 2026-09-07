@@ -120,7 +120,7 @@ void StripButton::paintButton (juce::Graphics& g, bool isMouseOver, bool isMouse
                                               juce::PathStrokeType::butt));
 
     // getPointOnCircumference measures clockwise from twelve o'clock, and a rotation by the
-    // same angle turns local +x onto the clockwise tangent there — so the head points the way
+    // same angle turns local +x onto the clockwise tangent there - so the head points the way
     // the ring travels.
     const auto tip = centre.getPointOnCircumference (radius, gapStart);
     const float head = juce::jmax (2.5f, size * 0.34f);

@@ -17,7 +17,7 @@ namespace flowermachine
     from the message thread (loader) to the audio thread (voices).
 
     Copied from Svarog (../CardamomTools/Svarog/Source/Generators/Sample/SampleSlot.h)
-    with the payload type changed — CLAUDE.md real-time rule 5.
+    with the payload type changed - CLAUDE.md real-time rule 5.
 
     A monotonic ring of N slots + an atomic live index, plus a message-thread
     retire list.
@@ -35,13 +35,13 @@ namespace flowermachine
     publish() always writes the slot AFTER the live one and advances monotonically,
     so a slot is only reused after `numSlots` publishes; for the race to occur the
     audio thread would have to be preempted, between the index load and the copy,
-    across `numSlots` sample loads (hundreds of ms / seconds) — i.e. only when the
+    across `numSlots` sample loads (hundreds of ms / seconds) - i.e. only when the
     audio is already catastrophically stalled. Assumes shared_ptr refcount ops are
     atomic & wait-free on the target runtimes (MSVC / libstdc++, x86/ARM).
 
     DIFFERENCE FROM SVAROG'S ORIGINAL: unload(). Svarog never unloads a slot, so
     publish() alone was enough there; FlowerMachine unloads every hidden page
-    (ARCHITECTURE.md section 5, decision D5) and publish(nullptr) frees nothing —
+    (ARCHITECTURE.md section 5, decision D5) and publish(nullptr) frees nothing -
     it writes the NEXT slot, leaving the previously live one still owning the
     decoded audio until the ring wraps 16 publishes later. unload() releases the
     whole ring instead, deferred by RELEASE_DELAY_MS so the slots are only cleared

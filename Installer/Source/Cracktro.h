@@ -12,7 +12,7 @@
 namespace flowerinstall
 {
     /*  The screen. Copper bars, a starfield, a wobbling logo and a scroller, the way
-        an intro looked in 1993 — with an actual installer underneath it.
+        an intro looked in 1993 - with an actual installer underneath it.
 
         Everything expensive is pre-rendered into Images once and blitted after that:
         JUCE 8 opens Windows windows with Direct2D, where an animated gradient misses

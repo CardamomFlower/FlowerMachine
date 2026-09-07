@@ -22,7 +22,7 @@ void FlowerLookAndFeel::setTheme (juce::PropertiesFile& settings, palette::Theme
         ours->applyPalette();
 
         // Re-publishing the same pointer is what makes every live window, menu and dialog
-        // run lookAndFeelChanged() and repaint — including the few components that keep a
+        // run lookAndFeelChanged() and repaint - including the few components that keep a
         // colour of their own, which override the look-and-feel and would otherwise stay.
         juce::Desktop::getInstance().setDefaultLookAndFeel (ours);
     }
@@ -92,7 +92,7 @@ void FlowerLookAndFeel::applyPalette()
 
     // The gain knob's value bubble does NOT take its text colour from any BubbleComponent
     // id: Slider's popup paints the value with TooltipWindow::textColourId. Left unset,
-    // that came from the scheme's highlighted text — near-black on a near-black bubble, so
+    // that came from the scheme's highlighted text - near-black on a near-black bubble, so
     // the number was there and simply could not be seen. The tooltip proper shares the id,
     // so both are given the same dark panel and the same cream type.
     setColour (TooltipWindow::backgroundColourId, palette::panel);

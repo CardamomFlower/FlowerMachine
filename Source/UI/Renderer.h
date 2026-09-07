@@ -56,7 +56,7 @@ namespace flowermachine::renderer
             applyToPeer (*peer, choice);
     }
 
-    /** Applies the choice to every native window that exists right now — menus, dialogs and
+    /** Applies the choice to every native window that exists right now - menus, dialogs and
         call-out boxes included, which the desktop component list does not cover. */
     inline void applyToAllWindows (Choice choice)
     {

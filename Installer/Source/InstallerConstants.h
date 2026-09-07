@@ -6,7 +6,7 @@
 
     A per-user install (decision of 2026-09-04): nothing here needs administrator
     rights, nothing writes outside HKEY_CURRENT_USER and the user's own folders,
-    and the process must never be elevated — a UAC prompt would repoint
+    and the process must never be elevated - a UAC prompt would repoint
     %LOCALAPPDATA% at the administrator's profile and install to the wrong place.
 */
 namespace flowerinstall
@@ -60,7 +60,7 @@ namespace flowerinstall
                    .getChildFile (APP_NAME).getChildFile ("Presets");
     }
 
-    /** Only this folder — CardamomTools above it is shared with the other tools. */
+    /** Only this folder - CardamomTools above it is shared with the other tools. */
     inline juce::File settingsFolder()
     {
         return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)

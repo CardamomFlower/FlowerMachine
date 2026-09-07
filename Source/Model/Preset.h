@@ -42,7 +42,7 @@ namespace flowermachine
         static int cellOf (const juce::ValueTree& cart);
 
         /** Absolute path first, then relPath against the preset file; may return a
-            file that does not exist — that cart is *missing*. */
+            file that does not exist - that cart is *missing*. */
         static juce::File resolveFile (const juce::ValueTree& cart, const juce::File& presetFile);
 
         /** Writes path and relPath; the title follows the file name unless kept. */

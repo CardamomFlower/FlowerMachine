@@ -8,7 +8,7 @@
 
 #include <windows.h>
 
-// id 1, type RT_RCDATA (10) — matches FindResourceW in Source/Payload.cpp
+// id 1, type RT_RCDATA (10) - matches FindResourceW in Source/Payload.cpp
 1 RCDATA "FlowerMachine_payload.bin"
 
 // This file REPLACES the block the Projucer generates, so the icons have to be

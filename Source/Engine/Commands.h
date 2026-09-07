@@ -19,7 +19,7 @@ namespace flowermachine
         juce::uint16 cartId = 0;
 
         /** play only: this voice ignores the cart's Loop flag and ends at the end of the file.
-            A sequence needs it — a looping pad would otherwise hold the queue for ever. */
+            A sequence needs it - a looping pad would otherwise hold the queue for ever. */
         bool ignoreLoop = false;
     };
 
@@ -27,7 +27,7 @@ namespace flowermachine
     class CommandFifo
     {
     public:
-        /** Message thread. Returns false when the queue is full — surfaced by the caller, never hidden. */
+        /** Message thread. Returns false when the queue is full - surfaced by the caller, never hidden. */
         bool push (const Command& command) noexcept
         {
             const auto scope = fifo.write (1);

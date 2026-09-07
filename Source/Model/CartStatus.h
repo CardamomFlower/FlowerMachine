@@ -5,7 +5,7 @@
 namespace flowermachine
 {
     /*  empty     no cart here
-        unloaded  assigned, but not resident (its page is hidden — section 5)
+        unloaded  assigned, but not resident (its page is hidden - section 5)
         loading   decoding on the pool
         ready     resident, triggerable
         missing   the file resolved nowhere

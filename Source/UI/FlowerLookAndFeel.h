@@ -19,7 +19,7 @@ namespace flowermachine
             The tables here are copies, so they do not follow a palette change by themselves. */
         void applyPalette();
 
-        /** Message thread: switch the scheme, remember it, and repaint everything on screen —
+        /** Message thread: switch the scheme, remember it, and repaint everything on screen -
             including the components that cache a colour of their own. */
         static void setTheme (juce::PropertiesFile&, palette::Theme);
 

@@ -66,7 +66,7 @@ namespace flowermachine
             appProperties.closeFiles();
         }
 
-        /*  Every quit request lands here — the window's close button, Windows logging off or
+        /*  Every quit request lands here - the window's close button, Windows logging off or
             restarting, the taskbar. Asking about unsaved changes in one place is what keeps a
             scheduled restart from throwing away an unsaved preset.
         */
@@ -169,7 +169,7 @@ namespace flowermachine
                     // preset reopened during the constructor above has not set it yet.
                     main->refreshTitle();
 
-                    // Esc and the file shortcuts have to work whatever holds the focus —
+                    // Esc and the file shortcuts have to work whatever holds the focus -
                     // including nothing, which is the state right after launch.
                     addKeyListener (main);
                     main->grabKeyboardFocus();

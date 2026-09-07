@@ -34,7 +34,7 @@ namespace flowermachine
 
         /*  Two routes to the same shortcuts. A key press is delivered to the focused
             component and then walks UP its parents, so with nothing focused it reaches the
-            window and stops there — this component is a child and would never see it. As a
+            window and stops there - this component is a child and would never see it. As a
             key listener registered on the window it is on that chain either way.
         */
         bool keyPressed (const juce::KeyPress&) override;

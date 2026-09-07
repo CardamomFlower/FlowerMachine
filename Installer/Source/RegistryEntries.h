@@ -14,7 +14,7 @@ namespace flowerinstall::registry
 
         juce::WindowsRegistry::registerFileAssociation is deliberately not used: it
         writes the open command with an unquoted path, which breaks the moment the
-        install folder has a space in it — and %LOCALAPPDATA% does, for many users.
+        install folder has a space in it - and %LOCALAPPDATA% does, for many users.
     */
 
     /** @param installFolder  where the program was installed

@@ -175,7 +175,7 @@ void UninstallTask::run()
 
     if (options.removePersonalData)
     {
-        // Only the app's own settings folder — CardamomTools above it is shared with
+        // Only the app's own settings folder - CardamomTools above it is shared with
         // the other tools and must survive.
         settingsFolder().deleteRecursively();
 
