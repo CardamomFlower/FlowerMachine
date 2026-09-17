@@ -50,6 +50,18 @@ namespace flowermachine
                 Base::mouseDrag (e);
         }
 
+        /*  The tooltip window asks whatever sits innermost under the pointer and never walks up
+            to the parent, so without this the bottom third of a pad - Stop, Loop, the knob -
+            would answer for the whole pad and say nothing. One override covers all three.
+        */
+        juce::String getTooltip() override
+        {
+            if (auto* parentClient = dynamic_cast<juce::TooltipClient*> (Base::getParentComponent()))
+                return parentClient->getTooltip();
+
+            return Base::getTooltip();
+        }
+
         void mouseUp (const juce::MouseEvent& e) override
         {
             if (popupPressed)
@@ -92,7 +104,7 @@ namespace flowermachine
                        public juce::SettableTooltipClient
     {
     public:
-        CartButton (int cellIndex, Controller&, const CartEngine&);
+        CartButton (int cellIndex, Controller&, const CartEngine&, juce::PropertiesFile&);
 
         /** page * CARTS_PER_PAGE + cell; set by the grid when the visible page changes. */
         void setCartId (int newCartId);
@@ -114,12 +126,14 @@ namespace flowermachine
         void chooseColour();
 
         static juce::String formatTime (double seconds);   // m:ss
+        static juce::String tooltipFor (const CartStatus&);
         static const juce::String& audioWildcard();
         int stripHeight() const;
         juce::Rectangle<int> playArea() const;
 
         Controller& controller;
         const CartEngine& engine;
+        juce::PropertiesFile& settings;   // remembered colours only
         const int cell;
         int cartId;
 
@@ -131,6 +145,7 @@ namespace flowermachine
         // cached view state, compared on refresh()
         CartState state = CartState::empty;
         juce::String title;
+        juce::String tooltipText;
         juce::String timeText;
         juce::Colour colour;
         bool playing = false;

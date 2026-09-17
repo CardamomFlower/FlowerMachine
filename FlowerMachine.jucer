@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="Flwr01" name="FlowerMachine" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="0.2.0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="0.3.0"
               companyName="Cardamom Tools" companyCopyright="(C) 2026 Cardamom Tools"
               companyWebsite="www.cardamomflower.dev" bundleIdentifier="com.cardamomtools.flowermachine"
               cppLanguageStandard="17">
@@ -51,12 +51,15 @@
         <FILE id="FmRdH" name="Renderer.h" compile="0" resource="0" file="Source/UI/Renderer.h"/>
       </GROUP>
     </GROUP>
+    <GROUP id="FmRes" name="Resources">
+      <FILE id="FmIcon" name="FlowerMachine.png" compile="0" resource="0" file="Resources/FlowerMachine.png"/>
+    </GROUP>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_WASAPI="1" JUCE_DIRECTSOUND="1" JUCE_ASIO="0" JUCE_USE_FLAC="1"
                JUCE_USE_OGGVORBIS="1" JUCE_USE_MP3AUDIOFORMAT="1" JUCE_USE_WINDOWS_MEDIA_FORMAT="1"
                JUCE_USE_CURL="0" JUCE_WEB_BROWSER="0" JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
   <EXPORTFORMATS>
-    <VS2022 targetFolder="Builds/VisualStudio2022">
+    <VS2022 targetFolder="Builds/VisualStudio2022" smallIcon="FmIcon" bigIcon="FmIcon">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="FlowerMachine" useRuntimeLibDLL="0"
                        winArchitecture="x64"/>

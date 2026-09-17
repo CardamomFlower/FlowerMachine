@@ -17,7 +17,7 @@ namespace flowermachine
                      private juce::Timer
     {
     public:
-        CartGrid (Controller&, const CartEngine&);
+        CartGrid (Controller&, const CartEngine&, juce::PropertiesFile&);
         ~CartGrid() override;
 
         void setPage (int page);

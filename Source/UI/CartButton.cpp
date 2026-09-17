@@ -11,15 +11,75 @@ namespace flowermachine
 
 namespace
 {
+    /*  Colours the operator has mixed, kept in the settings file so a custom band can be put on
+        a second pad without writing its hex down. The five fixed presets are not recorded: they
+        are always on screen, and spending a remembered slot on one wastes it.
+    */
+    namespace recentColours
+    {
+        constexpr const char* settingsKey = "recentColours";
+        constexpr int maxRemembered = 8;
+
+        bool isFixedPreset (juce::Colour c)
+        {
+            for (const auto& preset : palette::bandPresets)
+                if (preset == c)
+                    return true;
+
+            return false;
+        }
+
+        juce::Array<juce::Colour> load (const juce::PropertiesFile& settings)
+        {
+            juce::Array<juce::Colour> colours;
+
+            for (const auto& token : juce::StringArray::fromTokens (settings.getValue (settingsKey), " ", {}))
+            {
+                if (token.isEmpty() || colours.size() >= maxRemembered)
+                    continue;
+
+                // Opaque throughout: the picker has no alpha channel, and a short token from a
+                // hand-edited settings file would otherwise come back invisible.
+                const auto colour = juce::Colour::fromString (token).withAlpha (1.0f);
+
+                if (! colours.contains (colour))
+                    colours.add (colour);
+            }
+
+            return colours;
+        }
+
+        void remember (juce::PropertiesFile& settings, juce::Colour colour)
+        {
+            if (colour.isTransparent() || isFixedPreset (colour))
+                return;
+
+            auto colours = load (settings);
+            colours.removeAllInstancesOf (colour);
+            colours.insert (0, colour);           // most recent first
+            colours.resize (juce::jmin (colours.size(), maxRemembered));
+
+            juce::StringArray tokens;
+
+            for (const auto& c : colours)
+                tokens.add (c.toString());
+
+            settings.setValue (settingsKey, tokens.joinIntoString (" "));
+        }
+    }
+
     // Colour picker shown in a CallOutBox; reports every change live.
     class ColourPopup : public juce::Component,
                         private juce::ChangeListener
     {
     public:
-        ColourPopup (juce::Colour initial, std::function<void (juce::Colour)> onChangeToUse)
+        ColourPopup (juce::Colour initial, const juce::Array<juce::Colour>& recent,
+                     std::function<void (juce::Colour)> onChangeToUse,
+                     std::function<void (juce::Colour)> onDismissToUse)
             : selector (juce::ColourSelector::showColourAtTop | juce::ColourSelector::showSliders
                         | juce::ColourSelector::showColourspace),
-              onChange (std::move (onChangeToUse))
+              onChange (std::move (onChangeToUse)),
+              onDismiss (std::move (onDismissToUse))
         {
             selector.setCurrentColour (initial.isTransparent() ? palette::bandPresets[0] : initial,
                                        juce::dontSendNotification);
@@ -27,53 +87,98 @@ namespace
             addAndMakeVisible (selector);
 
             for (const auto& preset : palette::bandPresets)
-            {
-                auto* swatch = presets.add (new juce::TextButton());
-                swatch->setColour (juce::TextButton::buttonColourId, preset);
-                swatch->onClick = [this, preset] { selector.setCurrentColour (preset); };
-                addAndMakeVisible (swatch);
-            }
+                addSwatch (presets, preset);
+
+            for (const auto& colour : recent)
+                addSwatch (remembered, colour);
 
             addAndMakeVisible (clearButton);
             clearButton.onClick = [this] { onChange (juce::Colour()); };
 
-            setSize (260, 372);
+            setSize (260, 372 + (remembered.isEmpty() ? 0 : swatchHeight + rowGap));
         }
 
         ~ColourPopup() override
         {
             selector.removeChangeListener (this);
+
+            // `chosen` is transparent unless something in here was actually picked, so a popup
+            // opened only to look at a pad reports nothing and leaves the remembered row alone.
+            if (onDismiss != nullptr)
+                onDismiss (chosen);
         }
 
         void resized() override
         {
             auto r = getLocalBounds().reduced (6);
             clearButton.setBounds (r.removeFromBottom (26));
-            r.removeFromBottom (6);
+            r.removeFromBottom (rowGap);
 
-            auto row = r.removeFromBottom (22);
-            const int swatchWidth = (row.getWidth() - 4 * (presets.size() - 1)) / juce::jmax (1, presets.size());
+            // The remembered row keeps a fixed slot width, so a single kept colour is a chip
+            // rather than a bar across the popup, and the row does not re-flow as it fills.
+            layOutRow (remembered, r, recentColours::maxRemembered);
+            layOutRow (presets, r, presets.size());
 
-            for (auto* swatch : presets)
-            {
-                swatch->setBounds (row.removeFromLeft (swatchWidth));
-                row.removeFromLeft (4);
-            }
-
-            r.removeFromBottom (6);
             selector.setBounds (r);
         }
 
     private:
+        static constexpr int swatchHeight = 22;
+        static constexpr int rowGap = 6;
+        static constexpr int swatchGap = 4;
+
+        /*  A swatch commits its own colour rather than leaving it to the selector to broadcast.
+            ColourSelector::setCurrentColour is guarded by "if (c != colour)", and the selector is
+            seeded with bandPresets[0] for a pad that has no colour yet - so clicking that first
+            preset handed the selector a colour it already held, nothing was broadcast, and the pad
+            stayed uncoloured until some other swatch had been clicked.
+        */
+        void addSwatch (juce::OwnedArray<juce::TextButton>& row, juce::Colour colour)
+        {
+            auto* swatch = row.add (new juce::TextButton());
+            swatch->setColour (juce::TextButton::buttonColourId, colour);
+            swatch->onClick = [this, colour]
+            {
+                selector.setCurrentColour (colour, juce::dontSendNotification);
+                commit (colour);
+            };
+            addAndMakeVisible (swatch);
+        }
+
+        void layOutRow (juce::OwnedArray<juce::TextButton>& row, juce::Rectangle<int>& area, int slots)
+        {
+            if (row.isEmpty() || slots <= 0)
+                return;
+
+            auto strip = area.removeFromBottom (swatchHeight);
+            const int width = (strip.getWidth() - swatchGap * (slots - 1)) / slots;
+
+            for (auto* swatch : row)
+            {
+                swatch->setBounds (strip.removeFromLeft (width));
+                strip.removeFromLeft (swatchGap);
+            }
+
+            area.removeFromBottom (rowGap);
+        }
+
         void changeListenerCallback (juce::ChangeBroadcaster*) override
         {
-            onChange (selector.getCurrentColour());
+            commit (selector.getCurrentColour());
+        }
+
+        void commit (juce::Colour colour)
+        {
+            chosen = colour;
+            onChange (colour);
         }
 
         juce::ColourSelector selector;
-        juce::OwnedArray<juce::TextButton> presets;
+        juce::OwnedArray<juce::TextButton> presets, remembered;
         juce::TextButton clearButton { "No colour" };
+        juce::Colour chosen;                             // transparent until something is picked
         std::function<void (juce::Colour)> onChange;
+        std::function<void (juce::Colour)> onDismiss;
     };
 }
 
@@ -134,8 +239,10 @@ void StripButton::paintButton (juce::Graphics& g, bool isMouseOver, bool isMouse
 }
 
 //==============================================================================
-CartButton::CartButton (int cellIndex, Controller& controllerToUse, const CartEngine& engineToRead)
-    : controller (controllerToUse), engine (engineToRead), cell (cellIndex), cartId (cellIndex)
+CartButton::CartButton (int cellIndex, Controller& controllerToUse, const CartEngine& engineToRead,
+                        juce::PropertiesFile& settingsToUse)
+    : controller (controllerToUse), engine (engineToRead), settings (settingsToUse),
+      cell (cellIndex), cartId (cellIndex)
 {
     const auto openMenu = [this] { showMenu(); };
 
@@ -238,11 +345,18 @@ void CartButton::refresh()
         stopButton.setVisible (showControls);
         loopButton.setVisible (showControls);
         gainSlider.setVisible (showControls);
+    }
 
-        // Section 6: a missing or failed cart says why. The reason is the only place the
-        // operator can tell a rejected length from an unsupported codec.
-        const bool broken = status.state == CartState::missing || status.state == CartState::error;
-        setTooltip (broken ? status.error : juce::String());
+    /*  Named on hover, because a small board drops the title line first and a squeezed one
+        ellipsises it. Deliberately nothing that moves: the tooltip window restarts its delay
+        whenever the text changes, so a remaining time in here would mean it never appeared.
+        Section 6: a missing or failed cart still says why - the reason is the only place the
+        operator can tell a rejected length from an unsupported codec.
+    */
+    if (const auto text = tooltipFor (status); text != tooltipText)
+    {
+        tooltipText = text;
+        setTooltip (text);
     }
 
     state = status.state;
@@ -307,6 +421,21 @@ void CartButton::mouseDoubleClick (const juce::MouseEvent& e)
 {
     if (e.mods.isLeftButtonDown() && state == CartState::empty)
         chooseFile (false);
+}
+
+juce::String CartButton::tooltipFor (const CartStatus& status)
+{
+    switch (status.state)
+    {
+        case CartState::empty:    return {};
+        case CartState::loading:  return status.title + " - loading";
+        case CartState::missing:  return status.title + " - missing: " + status.error;
+        case CartState::error:    return status.title + " - " + status.error;
+        case CartState::unloaded:
+        case CartState::ready:    break;
+    }
+
+    return status.title;
 }
 
 void CartButton::showMenu()
@@ -388,12 +517,29 @@ void CartButton::renameCart()
 
 void CartButton::chooseColour()
 {
-    auto popup = std::make_unique<ColourPopup> (controller.getStatus (cartId).colour,
-                                                [safe = juce::Component::SafePointer<CartButton> (this)] (juce::Colour c)
-                                                {
-                                                    if (safe != nullptr)
-                                                        safe->controller.setColour (safe->cartId, c);
-                                                });
+    const juce::Component::SafePointer<CartButton> safe (this);
+
+    /*  The popup never touches the settings file itself. It is owned by the modal manager and can
+        outlive the window, so everything it reports is routed back through this pad: if the pad
+        has gone, the SafePointer is null and nothing happens.
+    */
+    auto popup = std::make_unique<ColourPopup> (
+        controller.getStatus (cartId).colour,
+        recentColours::load (settings),
+        [safe] (juce::Colour c)
+        {
+            if (safe != nullptr)
+                safe->controller.setColour (safe->cartId, c);
+        },
+        [safe] (juce::Colour chosen)
+        {
+            // On dismissal, not on every drag of the wheel: otherwise every colour passed through
+            // on the way to the chosen one would fill the remembered row. And only what was
+            // chosen here - reading the pad's own colour instead would let merely opening the
+            // picker on a coloured pad push one of the operator's own eight off the end.
+            if (safe != nullptr)
+                recentColours::remember (safe->settings, chosen);
+        });
 
     juce::CallOutBox::launchAsynchronously (std::move (popup), getScreenBounds(), nullptr);
 }

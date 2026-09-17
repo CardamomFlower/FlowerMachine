@@ -37,15 +37,24 @@ name order.
 
 ![The page menu](assets/page-menu.png)
 
-The same menu renames a page, and the **+** at the right adds one.
+The same menu renames a page, and the **+** at the right adds one. When there
+are more pages than fit the window, arrows appear at each end of the strip to
+move along it, and the mouse wheel scrolls it. No page is ever hidden, so every
+one keeps its right-click menu.
 
 ## A pad
 
 Each pad carries a title - the file name until you rename it - a **Stop**
 button, a **Loop** toggle and a **Gain** knob running from -24 to +18 dB, which
 a double-click puts back to zero. While it plays it shows the time remaining
-and a progress bar. The colour band along the top is yours to use however you
-like: by kind, by segment, by whoever is on next.
+and a progress bar. Rest the pointer on a pad for a moment and it names itself,
+which is what you want on a small board, where a squeezed pad gives up its time
+line and shortens the title to fit.
+
+The colour band along the top is yours to use however you like: by kind, by
+segment, by whoever is on next. **Colour...** offers five ready-made bands, the
+wheel, and the custom colours you have used before - the last eight are kept, so
+a custom band can go on a second pad without writing its code down.
 
 Right-click a pad for the rest. The same menu plays a whole **row** or
 **column** in sequence, starting from that pad and stopping at the edge of the

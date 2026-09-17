@@ -22,6 +22,7 @@ namespace
     constexpr int contentTopPadding = 16;
     constexpr int contentBottomPadding = 12;
     constexpr int tabRowHeight = 36;
+    constexpr int tabArrowWidth = 26;
     constexpr int rowGap = 12;
     constexpr int dirtyDotSize = 8;
 
@@ -38,7 +39,7 @@ MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineTo
     : controller (controllerToUse),
       engine (engineToUse),
       settings (settingsToUse),
-      grid (controllerToUse, engineToUse.getCartEngine())
+      grid (controllerToUse, engineToUse.getCartEngine(), settingsToUse)
 {
     setWantsKeyboardFocus (true);
 
@@ -61,6 +62,22 @@ MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineTo
     pageStrip.onRenameRequested = [this] (int page) { renamePage (page); };
     pageStrip.onRemoveRequested = [this] (int page) { removePage (page); };
     pageStrip.onFillRequested = [this] (int page) { fillPage (page); };
+
+    /*  Shown only when the pages do not fit. With the usual three or four they are not there at
+        all and the strip looks exactly as it did; past that they are the way along it, and every
+        page keeps its right-click menu because no tab is ever hidden.
+    */
+    addChildComponent (scrollLeftButton);
+    scrollLeftButton.onClick = [this] { pageStrip.scrollByTabs (-1); };
+
+    addChildComponent (scrollRightButton);
+    scrollRightButton.onClick = [this] { pageStrip.scrollByTabs (1); };
+
+    pageStrip.onScrollChanged = [this]
+    {
+        scrollLeftButton.setEnabled (pageStrip.canScrollLeft());
+        scrollRightButton.setEnabled (pageStrip.canScrollRight());
+    };
 
     addAndMakeVisible (addPageButton);
     addPageButton.onClick = [this] { addPage(); };
@@ -125,6 +142,8 @@ void MainComponent::applyPaletteColours()
     statusLabel.setColour (juce::Label::textColourId, palette::text2);
     stopAllButton.setColour (juce::TextButton::buttonColourId, palette::danger);
     stopAllButton.setColour (juce::TextButton::textColourOffId, palette::dangerText);
+    scrollLeftButton.setColour (juce::TextButton::buttonColourId, palette::control);
+    scrollRightButton.setColour (juce::TextButton::buttonColourId, palette::control);
 }
 
 void MainComponent::lookAndFeelChanged()
@@ -185,6 +204,20 @@ void MainComponent::resized()
     auto tabRow = tabRowBounds;
     addPageButton.setBounds (tabRow.removeFromRight (32).withSizeKeepingCentre (32, 32));
     tabRow.removeFromRight (8);
+
+    // Measured against the lane the strip would have to itself - with the gap above already
+    // taken off, or the arrows would stay hidden over the few pixels where they are first
+    // needed - so the answer cannot flip back and forth as they appear and take room away.
+    const bool needsArrows = pageStrip.getNaturalWidth (tabRowHeight - 1) > tabRow.getWidth();
+    scrollLeftButton.setVisible (needsArrows);
+    scrollRightButton.setVisible (needsArrows);
+
+    if (needsArrows)
+    {
+        scrollLeftButton.setBounds (tabRow.removeFromLeft (tabArrowWidth).withTrimmedBottom (1));
+        scrollRightButton.setBounds (tabRow.removeFromRight (tabArrowWidth).withTrimmedBottom (1));
+    }
+
     pageStrip.setBounds (tabRow.withTrimmedBottom (1));
 
     content.removeFromTop (rowGap);
@@ -480,6 +513,14 @@ void MainComponent::rebuildPages()
     }
 
     pageStrip.setPages (names, controller.getVisiblePage());
+
+    // In this order: a page added, removed or renamed changes whether the strip needs its
+    // arrows, the arrows change how wide the strip is, and only then is it worth scrolling the
+    // current page into view - otherwise a rename that brings the arrows out leaves the tab
+    // just renamed hanging off the end.
+    resized();
+    pageStrip.showCurrentTab();
+
     grid.setPage (controller.getVisiblePage());
     updateStatus();
 }

@@ -81,6 +81,7 @@ namespace flowermachine
         juce::TextButton settingsButton { "Settings" };
         juce::TextButton stopAllButton { "STOP ALL" };
         PageStrip pageStrip;
+        juce::TextButton scrollLeftButton { "<" }, scrollRightButton { ">" };
         juce::TextButton addPageButton { "+" };
         CartGrid grid;
         juce::Label statusLabel;
@@ -88,7 +89,7 @@ namespace flowermachine
         juce::RecentlyOpenedFilesList recentFiles;
         std::unique_ptr<juce::FileChooser> chooser;
         juce::Rectangle<int> tabRowBounds;   // for the underline in paint()
-        juce::TooltipWindow tooltipWindow { this, 700 };
+        juce::TooltipWindow tooltipWindow { this, TOOLTIP_DELAY_MS };
         renderer::Enforcer rendererEnforcer { settings };
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)

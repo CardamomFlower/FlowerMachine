@@ -7,11 +7,11 @@
 namespace flowermachine
 {
 
-CartGrid::CartGrid (Controller& controllerToUse, const CartEngine& engine)
+CartGrid::CartGrid (Controller& controllerToUse, const CartEngine& engine, juce::PropertiesFile& settings)
     : controller (controllerToUse)
 {
     for (int i = 0; i < CARTS_PER_PAGE; ++i)
-        addAndMakeVisible (cells.add (new CartButton (i, controller, engine)));
+        addAndMakeVisible (cells.add (new CartButton (i, controller, engine, settings)));
 
     startTimerHz (UI_REFRESH_HZ);
 }

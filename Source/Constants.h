@@ -27,6 +27,10 @@ namespace flowermachine
     inline constexpr int COMMAND_FIFO_SIZE = 256;
     inline constexpr int UI_REFRESH_HZ     = 30;
 
+    // Hover before a pad names itself. Long enough that it does not flash up during the
+    // ordinary pauses of a show, short enough to be worth waiting for on a small board.
+    inline constexpr int TOOLTIP_DELAY_MS  = 1500;
+
     // How long a sequence step waits to be heard before the queue passes over it (section 11).
     // It covers a pad still decoding when its turn comes and a command the audio thread has
     // not drained yet; a step that never starts must not hold the rest of the row for ever.
