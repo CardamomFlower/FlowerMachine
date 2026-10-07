@@ -22,6 +22,11 @@ namespace flowermachine
         double sourceSampleRate = 0.0;
         int sourceChannels = 0;
         double durationSeconds = 0.0;
+
+        // The file as it was when decoding began, so a later change on disk can be told from
+        // the audio held here.
+        juce::Time sourceModified;
+        juce::int64 sourceSize = 0;
     };
 
     using SamplePtr = std::shared_ptr<const SampleData>;

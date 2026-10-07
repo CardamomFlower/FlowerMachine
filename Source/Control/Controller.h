@@ -8,6 +8,7 @@
 
 #include "../Constants.h"
 #include "../Engine/AudioEngine.h"
+#include "../Loading/SampleCache.h"
 #include "../Loading/SampleLoader.h"
 #include "../Model/CartStatus.h"
 #include "../Model/Preset.h"
@@ -129,6 +130,7 @@ namespace flowermachine
                                    otherwise stat the library once per 0.5 dB step. */
         void syncCartFromModel (int cartId, const juce::ValueTree& cart, bool resolveTheFile);
         void loadCart (int cartId);
+        bool adoptFromCache (int cartId);   // true when the cache had it: the cart is ready
         void reloadCart (int cartId);   // re-reads a cart whose model entry did not change
         void unloadCart (int cartId);
         void dropCart (int cartId);
@@ -152,6 +154,11 @@ namespace flowermachine
         int visiblePage = 0;
 
         std::array<CartStatus, MAX_CARTS> statuses;
+
+        // The decoded audio of every resident cart, so that hiding its page can hand a long one
+        // to the cache instead of letting it go. Null for anything not resident.
+        std::array<SamplePtr, MAX_CARTS> resident;
+        SampleCache cache;
 
         std::vector<int> sequence;        // cart ids in play order; empty when none is running
         int sequenceIndex = -1;           // which of them is playing, -1 for none

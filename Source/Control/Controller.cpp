@@ -124,16 +124,31 @@ void Controller::setVisiblePage (int page)
     // A sequence belongs to the page it was started on, and that page is about to be unloaded.
     cancelSequence();
 
-    for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
-        unloadCart (cartIdOf (visiblePage, cell));
-
+    const int leaving = visiblePage;
     visiblePage = page;
 
+    /*  In three steps. Taking the arriving page's audio out of the cache before the departing
+        page is stored means the budget can never evict what the operator is coming back to;
+        loading the rest only after the departing page is stored means a long file on both
+        pages is handed across rather than decoded a second time.
+    */
     for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
     {
         const int cartId = cartIdOf (visiblePage, cell);
 
         if (statuses[(size_t) cartId].isAssigned())
+            adoptFromCache (cartId);
+    }
+
+    for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
+        unloadCart (cartIdOf (leaving, cell));
+
+    for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
+    {
+        const int cartId = cartIdOf (visiblePage, cell);
+        const auto& status = statuses[(size_t) cartId];
+
+        if (status.isAssigned() && status.state != CartState::ready)
             loadCart (cartId);
     }
 
@@ -617,6 +632,7 @@ void Controller::handleResult (const SampleLoader::Result& result)
     {
         status.state = CartState::error;
         status.error = result.error;
+        resident[(size_t) result.cartId].reset();
 
         // unload, not publish (nullptr): a cart that was ready before this attempt would
         // otherwise keep its old audio alive in the slot with nothing able to reach it.
@@ -630,6 +646,7 @@ void Controller::handleResult (const SampleLoader::Result& result)
     status.state = CartState::ready;
     status.error.clear();
 
+    resident[(size_t) result.cartId] = result.sample;
     engine.getCartEngine().publish (result.cartId, result.sample);
     notify (result.cartId);
 }
@@ -640,6 +657,8 @@ void Controller::handleDeviceChanged()
 
     if (rate > 0.0)
     {
+        cache.retainRate (rate);
+
         for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
         {
             const int cartId = cartIdOf (visiblePage, cell);
@@ -741,6 +760,10 @@ void Controller::loadCart (int cartId)
         return;
     }
 
+    // Kept from an earlier visit: ready at once, nothing to decode.
+    if (adoptFromCache (cartId))
+        return;
+
     status.file = Preset::resolveFile (cart, presetFile);
     status.durationSeconds = 0.0;
     status.sampleRate = 0.0;
@@ -749,6 +772,7 @@ void Controller::loadCart (int cartId)
     if (! status.file.existsAsFile())
     {
         loader.cancel (cartId);
+        resident[(size_t) cartId].reset();
         engine.getCartEngine().unload (cartId);
         status.state = CartState::missing;
         status.error = "File not found: " + cart[ids::path].toString();
@@ -759,6 +783,37 @@ void Controller::loadCart (int cartId)
     status.state = CartState::loading;
     notify (cartId);
     requestLoad (cartId);
+}
+
+bool Controller::adoptFromCache (int cartId)
+{
+    const auto cart = cartTree (cartId);
+
+    if (! cart.isValid())
+        return false;
+
+    const auto file = Preset::resolveFile (cart, presetFile);
+
+    if (! file.existsAsFile())
+        return false;
+
+    auto kept = cache.take (file, targetSampleRate());
+
+    if (kept == nullptr)
+        return false;
+
+    auto& status = statuses[(size_t) cartId];
+
+    loader.cancel (cartId);
+    status.file = file;
+    status.durationSeconds = kept->durationSeconds;
+    status.sampleRate = kept->sampleRate;
+    status.error.clear();
+    status.state = CartState::ready;
+    resident[(size_t) cartId] = kept;
+    engine.getCartEngine().publish (cartId, std::move (kept));
+    notify (cartId);
+    return true;
 }
 
 void Controller::reloadCart (int cartId)
@@ -775,6 +830,15 @@ void Controller::unloadCart (int cartId)
         return;
 
     loader.cancel (cartId);
+
+    if (auto& sample = resident[(size_t) cartId]; sample != nullptr)
+    {
+        if (status.state == CartState::ready && SampleCache::isWorthKeeping (*sample))
+            cache.store (status.file, std::move (sample));
+
+        sample.reset();
+    }
+
     engine.getCartEngine().unload (cartId);   // publish (nullptr) would free no memory
     status.state = CartState::unloaded;
     status.durationSeconds = 0.0;
@@ -788,6 +852,7 @@ void Controller::dropCart (int cartId)
     auto& cartEngine = engine.getCartEngine();
 
     loader.cancel (cartId);
+    resident[(size_t) cartId].reset();
 
     if (statuses[(size_t) cartId].isAssigned())
         cartEngine.unload (cartId);

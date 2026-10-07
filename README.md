@@ -98,8 +98,13 @@ Double-clicking a `.fmpreset` in Explorer opens it, whether FlowerMachine is
 running or not; only one copy runs at a time, so the file goes to the window
 you already have.
 
-Only the page you are looking at is held in memory, so a set with many pages
-does not fill the machine. A pad already playing carries on to the end.
+Only the page you are looking at is loaded, so a set with many pages does not
+fill the machine. The one exception is long files - 20 seconds or more - which
+stay in memory for a while after you leave their page, up to 256 MB in all, so
+coming back to a page full of beds does not mean waiting for them to load
+again. Shorter files take time in proportion to their length, so the wait on
+them is short. A pad already playing carries on to
+the end.
 
 ## Sound
 

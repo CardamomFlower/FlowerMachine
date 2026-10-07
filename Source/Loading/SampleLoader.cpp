@@ -80,6 +80,11 @@ private:
         juce::AudioFormatManager formatManager;
         formatManager.registerBasicFormats();
 
+        // Read before decoding, not after: a file that changes while it is being read then
+        // looks changed too, rather than being recorded as current.
+        const auto modified = file.getLastModificationTime();
+        const auto fileSize = file.getSize();
+
         const std::unique_ptr<juce::AudioFormatReader> reader (formatManager.createReaderFor (file));
 
         if (reader == nullptr)
@@ -107,6 +112,8 @@ private:
         auto data = std::make_shared<SampleData>();
         data->sampleRate = targetRate;
         data->sourcePath = file.getFullPathName();
+        data->sourceModified = modified;
+        data->sourceSize = fileSize;
         data->sourceSampleRate = sourceRate;
         data->sourceChannels = (int) reader->numChannels;
         data->durationSeconds = sourceFrames / sourceRate;

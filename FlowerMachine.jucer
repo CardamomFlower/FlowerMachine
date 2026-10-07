@@ -27,6 +27,8 @@
       <GROUP id="{F10E0000-0000-4000-8000-000000000005}" name="Loading">
         <FILE id="FmSlH" name="SampleLoader.h" compile="0" resource="0" file="Source/Loading/SampleLoader.h"/>
         <FILE id="FmSlC" name="SampleLoader.cpp" compile="1" resource="0" file="Source/Loading/SampleLoader.cpp"/>
+        <FILE id="FmScH" name="SampleCache.h" compile="0" resource="0" file="Source/Loading/SampleCache.h"/>
+        <FILE id="FmScC" name="SampleCache.cpp" compile="1" resource="0" file="Source/Loading/SampleCache.cpp"/>
       </GROUP>
       <GROUP id="{F10E0000-0000-4000-8000-000000000006}" name="Control">
         <FILE id="FmCtH" name="Controller.h" compile="0" resource="0" file="Source/Control/Controller.h"/>

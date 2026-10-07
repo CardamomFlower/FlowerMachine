@@ -13,6 +13,20 @@ void CartEngine::publish (int cartId, SamplePtr sample)
 
     auto& cart = carts[(size_t) cartId];
     cart.length.store (sample != nullptr ? sample->lengthFrames : 0);
+
+    /*  Every publish gets a control block of its own. SampleSlot::prune frees a retired entry
+        only when it is the last owner, and it tests each entry on its own: the same pointer
+        published twice - the same sample coming back from the cache, or shared by two carts -
+        would leave two retired entries that each count the other, so neither is ever freed.
+        The wrapper owns nothing but a reference to the caller's sample, and lets go of it
+        wherever the wrapper's last owner does, which the slot guarantees is this thread.
+    */
+    if (sample != nullptr)
+    {
+        auto owner = sample;
+        sample = SamplePtr (owner.get(), [owner] (const SampleData*) mutable { owner.reset(); });
+    }
+
     cart.slot.publish (std::move (sample));
 }
 

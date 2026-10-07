@@ -62,6 +62,13 @@ public:
         liveIndex.store (writeIndex, std::memory_order_release);
         nextIndex = (writeIndex + 1) % numSlots;
 
+        // A slot stops being live only here. Pushing a pending release a full delay past this
+        // moment keeps the promise unload() makes - nothing is cleared until it has been out of
+        // acquire()'s reach for RELEASE_DELAY_MS - even when the cart is published again, and
+        // unloaded again, before the earlier release has run.
+        if (releasePending)
+            releaseAt = juce::Time::getMillisecondCounter() + RELEASE_DELAY_MS;
+
         prune();
     }
 

@@ -52,10 +52,22 @@ namespace flowermachine
     inline constexpr double TEST_TONE_SECONDS = 0.3;
     inline constexpr float  TEST_TONE_DB      = -12.0f;
 
-    /** Decode pool size: clamp (cores - 1, 1, 4). */
+    // Decoded audio of long files is kept after its page is hidden, so going back to the page
+    // does not decode and resample it again. Measured in seconds because that is what every pad
+    // shows, so which pads come back instantly is predictable. Short files are not kept - loading
+    // takes time in proportion to length, so theirs is short - and the total is capped, because
+    // the machine is doing other work too.
+    inline constexpr double HIDDEN_CACHE_MIN_SECONDS = 20.0;
+    inline constexpr int    HIDDEN_CACHE_BUDGET_MB   = 256;
+
+    // Decode threads, at most. A busy machine keeps its other cores, and the pool runs at low
+    // priority as well, so what it does take it gives way on.
+    inline constexpr int MAX_LOADER_THREADS = 6;
+
+    /** Decode pool size: clamp (cores - 1, 1, MAX_LOADER_THREADS). */
     inline int loaderThreads()
     {
         const int cores = (int) std::thread::hardware_concurrency();
-        return std::clamp (cores - 1, 1, 4);
+        return std::clamp (cores - 1, 1, MAX_LOADER_THREADS);
     }
 }
