@@ -12,7 +12,11 @@ namespace
 
 bool SampleCache::isWorthKeeping (const SampleData& sample)
 {
-    return sample.durationSeconds >= HIDDEN_CACHE_MIN_SECONDS;
+    // Only what had to be resampled is slow to load again: a file already at the device's rate
+    // is read and decoded in a small fraction of the time, and would only take up the budget.
+    const bool resampled = ! juce::approximatelyEqual (sample.sourceSampleRate, sample.sampleRate);
+
+    return resampled && sample.durationSeconds >= HIDDEN_CACHE_MIN_SECONDS;
 }
 
 size_t SampleCache::sizeOf (const SampleData& sample)

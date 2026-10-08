@@ -99,12 +99,13 @@ running or not; only one copy runs at a time, so the file goes to the window
 you already have.
 
 Only the page you are looking at is loaded, so a set with many pages does not
-fill the machine. The one exception is long files - 20 seconds or more - which
-stay in memory for a while after you leave their page, up to 256 MB in all, so
-coming back to a page full of beds does not mean waiting for them to load
-again. Shorter files take time in proportion to their length, so the wait on
-them is short. A pad already playing carries on to
-the end.
+fill the machine. The one exception is long files - 30 seconds or more - whose
+sample rate differs from the output device's: converting them is what makes a
+file slow to load, so they stay in memory for a while after you leave their
+page, up to 256 MB in all, and coming back to a page full of beds does not mean
+waiting for them again. Files already at the device's rate load quickly
+whatever their length, and shorter files take time in proportion to it. A pad
+already playing carries on to the end.
 
 ## Sound
 

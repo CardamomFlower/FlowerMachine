@@ -9,9 +9,11 @@
 namespace flowermachine
 {
     /*  Keeps the decoded audio of long files after their page has been hidden, so that showing
-        the page again does not decode and resample them a second time. Short files are not
-        kept: loading takes time in proportion to length, so theirs is short, and memory is not
-        free on a machine doing other work too.
+        the page again does not decode and resample them a second time. Only files that had to be
+        resampled to the device's rate are kept, because resampling is nearly all of the cost of a
+        load: a file already at that rate comes back in a fraction of the time. Short files are not
+        kept either - loading takes time in proportion to length, so theirs is short - and memory
+        is not free on a machine doing other work too.
 
         Bounded by a byte budget, oldest out first. An entry is taken out again when its page
         is shown, so what is held here is only ever audio that nothing on screen is using.
@@ -27,7 +29,8 @@ namespace flowermachine
     class SampleCache
     {
     public:
-        /** Long enough that loading it again would be noticed (HIDDEN_CACHE_MIN_SECONDS). */
+        /** Resampled, and long enough that loading it again would be noticed
+            (HIDDEN_CACHE_MIN_SECONDS). */
         static bool isWorthKeeping (const SampleData&);
 
         /** Keeps `sample` as the audio of `file`, dropping the oldest entries to stay within the
