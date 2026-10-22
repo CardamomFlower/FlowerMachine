@@ -42,6 +42,16 @@ are more pages than fit the window, arrows appear at each end of the strip to
 move along it, and the mouse wheel scrolls it. No page is ever hidden, so every
 one keeps its right-click menu.
 
+## Arranging
+
+**Edit layout**, in the top bar, unlocks the arrangement. While it is lit, drag
+a pad onto another cell to move it there - onto a pad that is already there and
+the two trade places - and drag a page tab along the strip to move the page.
+Nothing is loaded again, and a pad that is playing keeps playing where it lands.
+While Edit layout is on, a click on a pad plays nothing, and the status line
+says so; click the button again to go back to playing. It is always off when
+FlowerMachine starts.
+
 ## A pad
 
 Each pad carries a title - the file name until you rename it - a **Stop**
@@ -99,13 +109,9 @@ running or not; only one copy runs at a time, so the file goes to the window
 you already have.
 
 Only the page you are looking at is loaded, so a set with many pages does not
-fill the machine. The one exception is long files - 30 seconds or more - whose
-sample rate differs from the output device's: converting them is what makes a
-file slow to load, so they stay in memory for a while after you leave their
-page, up to 256 MB in all, and coming back to a page full of beds does not mean
-waiting for them again. Files already at the device's rate load quickly
-whatever their length, and shorter files take time in proportion to it. A pad
-already playing carries on to the end.
+fill the machine. A pad already playing carries on to the end, and if you go
+back to its page while it plays, it is picked up as it is rather than loaded
+again.
 
 ## Sound
 
@@ -115,7 +121,15 @@ M4A and Opus are not supported; convert those first. A file longer than thirty
 minutes is refused, and only the first two channels of a file are used.
 
 Files are decoded to memory when a page opens, so a click reaches the output
-immediately rather than waiting on the disk.
+immediately rather than waiting on the disk. A file whose sample rate differs
+from the output device's is converted as it loads, flat to 20 kHz and quickly
+enough that a long bed is ready moments after its page appears.
+
+A pad set to **Loop** comes round without a gap. MP3 needs one thing for that:
+an encoder pads every MP3 with a little silence at both ends, and the encoders
+of the LAME family - most of them - write down how much, so it can be left out.
+An MP3 from an encoder that does not will loop with a short gap; use WAV or
+FLAC for that loop instead.
 
 **Settings** picks the output device and has a test tone for checking the
 routing before you start. It also holds **Colours** - dark or light, switched

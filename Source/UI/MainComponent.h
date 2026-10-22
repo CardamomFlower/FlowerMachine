@@ -17,9 +17,14 @@ namespace flowermachine
         the page strip, the grid and the status line. Owns the preset workflow:
         new / open / save / save as / recent, unsaved-changes prompts, reopening the
         last preset at launch.
+
+        Edit layout is a lock on the arrangement. Off, a press on a pad plays it at once, as a
+        show needs; on, pads and page tabs can be dragged to new places and a press plays
+        nothing. It starts off every time the program opens.
     */
     class MainComponent : public juce::Component,
-                          public juce::KeyListener
+                          public juce::KeyListener,
+                          public juce::DragAndDropContainer
     {
     public:
         /** @param presetToOpen  a preset named on the command line - the file association
@@ -57,6 +62,7 @@ namespace flowermachine
     private:
         void applyPaletteColours();   // the few colours held here rather than in the LookAndFeel
         bool handleShortcut (const juce::KeyPress&);
+        void dragOperationEnded (const juce::DragAndDropTarget::SourceDetails&) override;
         void showFileMenu();
         void newPreset();
         void openPreset();
@@ -65,6 +71,8 @@ namespace flowermachine
         void saveAs (std::function<void()> then = nullptr);
         void confirmDiscard (std::function<void()> proceed, std::function<void()> cancelled = nullptr);
         void rememberPreset (const juce::File&);
+
+        void setEditMode (bool shouldEdit);
 
         void addPage();
         void renamePage (int page);
@@ -81,6 +89,7 @@ namespace flowermachine
 
         juce::TextButton fileButton { "File" };
         juce::Label presetLabel;
+        juce::TextButton editButton { "Edit layout" };
         juce::TextButton settingsButton { "Settings" };
         juce::TextButton stopAllButton { "STOP ALL" };
         PageStrip pageStrip;

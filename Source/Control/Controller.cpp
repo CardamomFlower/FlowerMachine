@@ -1,9 +1,40 @@
 #include "Controller.h"
 
+#include <algorithm>
+
 #include "../Model/Ids.h"
 
 namespace flowermachine
 {
+
+namespace
+{
+    /*  Applies a swapCarts or movePage command to an array indexed by cart id, so that what was
+        at id i ends up at cartIdAfter (change, i). A page is a run of CARTS_PER_PAGE ids, so
+        moving one is a rotation of the pages between where it was and where it goes.
+    */
+    template <typename Array>
+    void renumber (Array& byCartId, const Command& change)
+    {
+        if (change.type == Command::Type::swapCarts)
+        {
+            std::swap (byCartId[change.cartId], byCartId[change.target]);
+            return;
+        }
+
+        if (change.type != Command::Type::movePage)
+            return;
+
+        const auto pageStart = [&byCartId] (int page) { return byCartId.begin() + page * CARTS_PER_PAGE; };
+        const int from = change.cartId;
+        const int to = change.target;
+
+        if (from < to)
+            std::rotate (pageStart (from), pageStart (from + 1), pageStart (to + 1));
+        else if (to < from)
+            std::rotate (pageStart (to), pageStart (from), pageStart (from + 1));
+    }
+}
 
 Controller::Controller (AudioEngine& engineToUse, SampleLoader& loaderToUse)
     : engine (engineToUse), loader (loaderToUse)
@@ -114,6 +145,33 @@ void Controller::removePage (int page)
     preset.removePage (page);
 }
 
+void Controller::movePage (int from, int to)
+{
+    const int numPages = getNumPages();
+
+    if (from == to || ! juce::isPositiveAndBelow (from, numPages) || ! juce::isPositiveAndBelow (to, numPages))
+        return;
+
+    const Command change { Command::Type::movePage, (juce::uint16) from, false, (juce::uint16) to };
+    bool delivered = false;
+
+    if (! queueLayoutChange (change, delivered))
+        return;
+
+    // The renumbering below is the whole of the change; the listener must not act on it too.
+    suppressModelEvents = true;
+    preset.movePage (from, to);
+    suppressModelEvents = false;
+
+    followLayoutChange (change, delivered);
+    visiblePage = pageAfterMove (visiblePage, from, to);
+
+    markDirty();
+
+    if (onPagesChanged)
+        onPagesChanged();
+}
+
 void Controller::setVisiblePage (int page)
 {
     page = juce::jlimit (0, juce::jmax (0, getNumPages() - 1), page);
@@ -127,28 +185,16 @@ void Controller::setVisiblePage (int page)
     const int leaving = visiblePage;
     visiblePage = page;
 
-    /*  In three steps. Taking the arriving page's audio out of the cache before the departing
-        page is stored means the budget can never evict what the operator is coming back to;
-        loading the rest only after the departing page is stored means a long file on both
-        pages is handed across rather than decoded a second time.
-    */
-    for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
-    {
-        const int cartId = cartIdOf (visiblePage, cell);
-
-        if (statuses[(size_t) cartId].isAssigned())
-            adoptFromCache (cartId);
-    }
-
+    // Departing page first: its audio is released only after a delay, so a file that is on
+    // both pages is still there to be handed across instead of decoded a second time.
     for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
         unloadCart (cartIdOf (leaving, cell));
 
     for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
     {
         const int cartId = cartIdOf (visiblePage, cell);
-        const auto& status = statuses[(size_t) cartId];
 
-        if (status.isAssigned() && status.state != CartState::ready)
+        if (statuses[(size_t) cartId].isAssigned())
             loadCart (cartId);
     }
 
@@ -226,6 +272,29 @@ void Controller::clearCart (int cartId)
 {
     if (isValidCart (cartId))
         preset.removeCart (pageOf (cartId), cellOf (cartId));
+}
+
+void Controller::moveCart (int fromCartId, int toCartId)
+{
+    if (! isValidCart (fromCartId) || ! isValidCart (toCartId) || fromCartId == toCartId
+        || pageOf (fromCartId) != pageOf (toCartId) || ! statuses[(size_t) fromCartId].isAssigned())
+        return;
+
+    const Command change { Command::Type::swapCarts, (juce::uint16) fromCartId, false, (juce::uint16) toCartId };
+    bool delivered = false;
+
+    if (! queueLayoutChange (change, delivered))
+        return;
+
+    suppressModelEvents = true;
+    preset.moveCart (pageOf (fromCartId), cellOf (fromCartId), cellOf (toCartId));
+    suppressModelEvents = false;
+
+    followLayoutChange (change, delivered);
+
+    notify (fromCartId);
+    notify (toCartId);
+    markDirty();
 }
 
 void Controller::setTitle (int cartId, const juce::String& newTitle)
@@ -610,12 +679,21 @@ void Controller::timerCallback()
 {
     advanceSequence();
 
-    // Pruning is a once-a-second job; the timer runs fast so a sequence hands over promptly.
-    if (--pruneCountdown <= 0)
+    // Once every queued move has been applied on the audio thread, gain and loop are written
+    // again from the status table: anything held back meanwhile (writeEngineSettings) lands now.
+    auto& cartEngine = engine.getCartEngine();
+
+    if (layoutChangesSynced != layoutChangesQueued && cartEngine.getLayoutChangesApplied() == layoutChangesQueued)
     {
-        pruneCountdown = UI_REFRESH_HZ;
-        engine.getCartEngine().pruneAll();
+        layoutChangesSynced = layoutChangesQueued;
+
+        for (int cartId = 0; cartId < MAX_CARTS; ++cartId)
+            writeEngineSettings (cartId);
     }
+
+    // Every tick, not once a second: a page that has been left is freed as soon as its release
+    // delay is up, rather than up to a second later while the next page is already loading.
+    engine.getCartEngine().pruneAll();
 }
 
 void Controller::handleResult (const SampleLoader::Result& result)
@@ -632,22 +710,33 @@ void Controller::handleResult (const SampleLoader::Result& result)
     {
         status.state = CartState::error;
         status.error = result.error;
-        resident[(size_t) result.cartId].reset();
 
-        // unload, not publish (nullptr): a cart that was ready before this attempt would
-        // otherwise keep its old audio alive in the slot with nothing able to reach it.
+        // A cart that was ready before this attempt gives its old audio back: it is no longer
+        // what the pad is meant to play.
+        resident[(size_t) result.cartId].reset();
         engine.getCartEngine().unload (result.cartId);
         notify (result.cartId);
         return;
     }
 
-    status.durationSeconds = result.sample->durationSeconds;
-    status.sampleRate = result.sample->sampleRate;
+    // Pads on one file asked for together - a page shown, a preset opened - each decode it.
+    // The first copy to arrive is the one they share; the others are let go here.
+    SamplePtr sample = result.sample;
+
+    if (auto existing = findDecoded (status.file, sample->sampleRate))
+        sample = std::move (existing);
+
+    status.durationSeconds = sample->durationSeconds;
+    status.sampleRate = sample->sampleRate;
     status.state = CartState::ready;
     status.error.clear();
 
-    resident[(size_t) result.cartId] = result.sample;
-    engine.getCartEngine().publish (result.cartId, result.sample);
+    // What it replaces stays findable while it lives; with nothing resident, what it remembered stays.
+    if (resident[(size_t) result.cartId] != nullptr)
+        lastDecoded[(size_t) result.cartId] = resident[(size_t) result.cartId];
+
+    resident[(size_t) result.cartId] = sample;
+    engine.getCartEngine().publish (result.cartId, std::move (sample));
     notify (result.cartId);
 }
 
@@ -657,8 +746,6 @@ void Controller::handleDeviceChanged()
 
     if (rate > 0.0)
     {
-        cache.retainRate (rate);
-
         for (int cell = 0; cell < CARTS_PER_PAGE; ++cell)
         {
             const int cartId = cartIdOf (visiblePage, cell);
@@ -725,6 +812,74 @@ void Controller::resyncAll()
         onPagesChanged();
 }
 
+bool Controller::queueLayoutChange (const Command& change, bool& delivered)
+{
+    // With a device open the command has to reach the engine, or whatever is sounding would
+    // stay under its old id - wrong gain, and its Stop no longer reaching it. A move that cannot
+    // be queued (the queue is full: the audio thread has stopped draining it) is not made.
+    // Without a device there is no voice to follow and nothing drains the queue.
+    delivered = engine.hasOutputDevice();
+
+    if (delivered && ! engine.getCartEngine().push (change))
+        return false;
+
+    if (delivered)
+        ++layoutChangesQueued;
+
+    return true;
+}
+
+void Controller::followLayoutChange (const Command& change, bool delivered)
+{
+    // A queue is a list of cart ids, and they are about to mean other carts.
+    cancelSequence();
+
+    auto& cartEngine = engine.getCartEngine();
+
+    // A decode in flight reports under the id it was asked for, which is about to belong to
+    // another cart. It is dropped here and asked for again once its cart has the new id.
+    std::vector<int> stillLoading;
+
+    for (int cartId = 0; cartId < MAX_CARTS; ++cartId)
+    {
+        // A cart the change leaves where it is keeps its decode: the result still reports under
+        // an id that belongs to it.
+        if (statuses[(size_t) cartId].state == CartState::loading && cartIdAfter (change, cartId) != cartId)
+        {
+            loader.cancel (cartId);
+            stillLoading.push_back (cartIdAfter (change, cartId));
+        }
+    }
+
+    const auto residentBefore = resident;
+
+    renumber (statuses, change);
+    renumber (resident, change);
+
+    // Queued, the command moves every voice and every cart's gain and loop flag on the audio
+    // thread in one step (see CartEngine::followLayoutChange). Not queued - no device - the
+    // settings are written from here.
+    for (int cartId = 0; cartId < MAX_CARTS; ++cartId)
+    {
+        if (! delivered)
+            writeEngineSettings (cartId);
+
+        // The slot of every id whose audio changed hands is written again; nothing is decoded.
+        const auto& sample = resident[(size_t) cartId];
+
+        if (sample == residentBefore[(size_t) cartId])
+            continue;
+
+        if (sample != nullptr)
+            cartEngine.publish (cartId, sample);
+        else
+            cartEngine.unload (cartId);
+    }
+
+    for (const int cartId : stillLoading)
+        loadCart (cartId);
+}
+
 void Controller::syncCartFromModel (int cartId, const juce::ValueTree& cart, bool resolveTheFile)
 {
     auto& status = statuses[(size_t) cartId];
@@ -744,9 +899,20 @@ void Controller::syncCartFromModel (int cartId, const juce::ValueTree& cart, boo
                                   (float) (double) cart.getProperty (ids::gainDb, 0.0));
     status.loop = (bool) cart.getProperty (ids::loop, false);
 
+    writeEngineSettings (cartId);
+}
+
+void Controller::writeEngineSettings (int cartId)
+{
+    // While a queued move has yet to be applied, the audio thread is about to carry every cart's
+    // gain and loop flag to its new id, and a value written now would be carried to the wrong
+    // cart. The timer writes them all from the status table once the move has landed.
+    if (layoutChangesSynced != layoutChangesQueued)
+        return;
+
     auto& cartEngine = engine.getCartEngine();
-    cartEngine.setGainDb (cartId, status.gainDb);
-    cartEngine.setLoop (cartId, status.loop);
+    cartEngine.setGainDb (cartId, statuses[(size_t) cartId].gainDb);
+    cartEngine.setLoop (cartId, statuses[(size_t) cartId].loop);
 }
 
 void Controller::loadCart (int cartId)
@@ -759,10 +925,6 @@ void Controller::loadCart (int cartId)
         dropCart (cartId);
         return;
     }
-
-    // Kept from an earlier visit: ready at once, nothing to decode.
-    if (adoptFromCache (cartId))
-        return;
 
     status.file = Preset::resolveFile (cart, presetFile);
     status.durationSeconds = 0.0;
@@ -780,40 +942,57 @@ void Controller::loadCart (int cartId)
         return;
     }
 
+    // Already in memory - another pad on the same file, a bed still playing from when its page
+    // was left, a page left a moment ago: ready at once, nothing to decode.
+    if (auto decoded = findDecoded (status.file, targetSampleRate()))
+    {
+        loader.cancel (cartId);
+        status.durationSeconds = decoded->durationSeconds;
+        status.sampleRate = decoded->sampleRate;
+        status.state = CartState::ready;
+
+        // What it replaces stays findable while it lives. A cart with nothing resident keeps what
+        // it remembered instead: after a reopen or a page change that is audio another pad may
+        // still be about to pick up.
+        if (resident[(size_t) cartId] != nullptr)
+            lastDecoded[(size_t) cartId] = resident[(size_t) cartId];
+
+        resident[(size_t) cartId] = decoded;
+        engine.getCartEngine().publish (cartId, std::move (decoded));
+        notify (cartId);
+        return;
+    }
+
     status.state = CartState::loading;
     notify (cartId);
     requestLoad (cartId);
 }
 
-bool Controller::adoptFromCache (int cartId)
+SamplePtr Controller::findDecoded (const juce::File& file, double sampleRate) const
 {
-    const auto cart = cartTree (cartId);
+    const auto path = file.getFullPathName();
 
-    if (! cart.isValid())
-        return false;
+    // Audio decoded before the file was edited or replaced on disk is no longer that file. The
+    // stamp kept with the audio is the one taken when decoding began.
+    const auto modified = file.getLastModificationTime();
+    const auto size = file.getSize();
 
-    const auto file = Preset::resolveFile (cart, presetFile);
+    const auto isWanted = [&] (const SamplePtr& sample)
+    {
+        return sample != nullptr && juce::approximatelyEqual (sample->sampleRate, sampleRate)
+            && sample->sourcePath == path && sample->sourceModified == modified && sample->sourceSize == size;
+    };
 
-    if (! file.existsAsFile())
-        return false;
+    for (size_t i = 0; i < resident.size(); ++i)
+    {
+        if (isWanted (resident[i]))
+            return resident[i];
 
-    auto kept = cache.take (file, targetSampleRate());
+        if (auto held = lastDecoded[i].lock(); isWanted (held))
+            return held;
+    }
 
-    if (kept == nullptr)
-        return false;
-
-    auto& status = statuses[(size_t) cartId];
-
-    loader.cancel (cartId);
-    status.file = file;
-    status.durationSeconds = kept->durationSeconds;
-    status.sampleRate = kept->sampleRate;
-    status.error.clear();
-    status.state = CartState::ready;
-    resident[(size_t) cartId] = kept;
-    engine.getCartEngine().publish (cartId, std::move (kept));
-    notify (cartId);
-    return true;
+    return {};
 }
 
 void Controller::reloadCart (int cartId)
@@ -831,15 +1010,12 @@ void Controller::unloadCart (int cartId)
 
     loader.cancel (cartId);
 
-    if (auto& sample = resident[(size_t) cartId]; sample != nullptr)
-    {
-        if (status.state == CartState::ready && SampleCache::isWorthKeeping (*sample))
-            cache.store (status.file, std::move (sample));
+    // Let go of, but remember: the audio stays alive while a voice still plays it or its slot
+    // waits out the release delay, and in that time it can be picked up again for free.
+    lastDecoded[(size_t) cartId] = resident[(size_t) cartId];
+    resident[(size_t) cartId].reset();
 
-        sample.reset();
-    }
-
-    engine.getCartEngine().unload (cartId);   // publish (nullptr) would free no memory
+    engine.getCartEngine().unload (cartId);
     status.state = CartState::unloaded;
     status.durationSeconds = 0.0;
     status.sampleRate = 0.0;
@@ -852,14 +1028,17 @@ void Controller::dropCart (int cartId)
     auto& cartEngine = engine.getCartEngine();
 
     loader.cancel (cartId);
+
+    // Remembered like a hidden page's audio: a preset reloaded or a page removed brings the same
+    // files straight back, and they are still in memory for the length of the release delay.
+    lastDecoded[(size_t) cartId] = resident[(size_t) cartId];
     resident[(size_t) cartId].reset();
 
     if (statuses[(size_t) cartId].isAssigned())
         cartEngine.unload (cartId);
 
-    cartEngine.setGainDb (cartId, 0.0f);
-    cartEngine.setLoop (cartId, false);
     statuses[(size_t) cartId] = CartStatus();
+    writeEngineSettings (cartId);
 }
 
 void Controller::requestLoad (int cartId)

@@ -33,12 +33,19 @@ namespace flowermachine
         void setPageName (int index, const juce::String& newName);
         bool addPage (const juce::String& name);       // false at MAX_PAGES
         void removePage (int index);                   // never removes the last page
+
+        /** Moves the page at `from` to index `to`; the pages in between shift by one. */
+        void movePage (int from, int to);
         int pageIndexOf (const juce::ValueTree& page) const;
 
         //==============================================================================
         juce::ValueTree getCart (int page, int cell) const;        // invalid when empty
         juce::ValueTree getOrCreateCart (int page, int cell);
         void removeCart (int page, int cell);
+
+        /** Moves the cart at `fromCell` to `toCell` of the same page; a cart already at
+            `toCell` takes `fromCell` in exchange. */
+        void moveCart (int page, int fromCell, int toCell);
         static int cellOf (const juce::ValueTree& cart);
 
         /** Absolute path first, then relPath against the preset file; may return a

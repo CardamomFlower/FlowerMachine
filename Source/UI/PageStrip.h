@@ -15,11 +15,26 @@ namespace flowermachine
         only select a page - a hidden tab has no button on screen, so its right-click menu, and
         with it Rename, is unreachable. Overriding resized() without calling the base keeps every
         tab laid out and the chevron is never built.
+
+        While the layout is being edited a tab can be dragged along the strip to move its page;
+        near either end the strip scrolls under the pointer, so a page can reach a place that
+        is out of view.
     */
-    class PageStrip : public juce::TabbedButtonBar
+    class PageStrip : public juce::TabbedButtonBar,
+                      public juce::DragAndDropTarget,
+                      private juce::Timer
     {
     public:
         PageStrip();
+        ~PageStrip() override;
+
+        void setEditMode (bool shouldEdit);
+        bool isEditMode() const noexcept { return editMode; }
+
+        /** What a tab hands to the drag-and-drop container, and the page it names (-1 when the
+            description is not a tab's). */
+        static juce::var dragDescription (int page);
+        static int draggedPage (const juce::var& description);
 
         /** Rebuilds the tabs without firing onPageSelected. The caller lays the strip out and
             then calls showCurrentTab, because its width may have changed in between. */
@@ -42,9 +57,23 @@ namespace flowermachine
         std::function<void (int page)> onRenameRequested;
         std::function<void (int page)> onRemoveRequested;
         std::function<void (int page)> onFillRequested;
+        std::function<void (int from, int to)> onPageMoved;
         std::function<void()> onScrollChanged;   // the arrows may need enabling or disabling
 
+        bool isInterestedInDragSource (const SourceDetails&) override;
+        void itemDragEnter (const SourceDetails&) override;
+        void itemDragMove (const SourceDetails&) override;
+        void itemDragExit (const SourceDetails&) override;
+        void itemDropped (const SourceDetails&) override;
+
     private:
+        void paintOverChildren (juce::Graphics&) override;
+        void timerCallback() override;
+
+        /** The gap between tabs nearest to `x`: 0 is before the first tab, getNumTabs() after
+            the last. */
+        int insertionIndexAt (int x) const;
+        void setInsertionIndex (int index);
         void resized() override;
         void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
         void currentTabChanged (int newCurrentTabIndex, const juce::String& newCurrentTabName) override;
@@ -59,6 +88,9 @@ namespace flowermachine
         int scrollOffset = 0;
         int contentWidth = 0;
         bool rebuilding = false;
+        bool editMode = false;
+        int draggingPage = -1;      // the tab being dragged over the strip, -1 when none
+        int insertionIndex = -1;    // where it would land, -1 when nowhere new
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PageStrip)
     };

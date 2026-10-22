@@ -29,6 +29,12 @@ void CartGrid::setPage (int newPage)
         cells[i]->setCartId (Controller::cartIdOf (page, i));
 }
 
+void CartGrid::setEditMode (bool shouldEdit)
+{
+    for (auto* cellButton : cells)
+        cellButton->setEditMode (shouldEdit);
+}
+
 void CartGrid::timerCallback()
 {
     /*  A drag that ends while a dialog or a menu is up is never reported back here, so the
@@ -137,6 +143,47 @@ void CartGrid::filesDropped (const juce::StringArray& files, int x, int y)
     }
 
     controller.assignFile (cartId, file);
+}
+
+//==============================================================================
+bool CartGrid::isInterestedInDragSource (const SourceDetails& details)
+{
+    // Only this grid's own pads: the description alone could have come from anywhere.
+    const auto* source = details.sourceComponent.get();
+    return source != nullptr && source->getParentComponent() == this
+        && CartButton::draggedCell (details.description) >= 0;
+}
+
+void CartGrid::itemDragEnter (const SourceDetails& details)
+{
+    showDropTarget (details);
+}
+
+void CartGrid::itemDragMove (const SourceDetails& details)
+{
+    showDropTarget (details);
+}
+
+void CartGrid::itemDragExit (const SourceDetails&)
+{
+    setHoverCell (-1);
+}
+
+void CartGrid::itemDropped (const SourceDetails& details)
+{
+    const int from = CartButton::draggedCell (details.description);
+    const int to = cellAt (details.localPosition.x, details.localPosition.y);
+    setHoverCell (-1);
+
+    if (from >= 0 && to >= 0 && to != from)
+        controller.moveCart (Controller::cartIdOf (page, from), Controller::cartIdOf (page, to));
+}
+
+void CartGrid::showDropTarget (const SourceDetails& details)
+{
+    // The pad's own cell is not marked: dropping it there changes nothing.
+    const int cellIndex = cellAt (details.localPosition.x, details.localPosition.y);
+    setHoverCell (cellIndex == CartButton::draggedCell (details.description) ? -1 : cellIndex);
 }
 
 //==============================================================================

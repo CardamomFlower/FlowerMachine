@@ -16,7 +16,7 @@ void CartEngine::publish (int cartId, SamplePtr sample)
 
     /*  Every publish gets a control block of its own. SampleSlot::prune frees a retired entry
         only when it is the last owner, and it tests each entry on its own: the same pointer
-        published twice - the same sample coming back from the cache, or shared by two carts -
+        published twice - the same sample picked up again by another pad, or after a move -
         would leave two retired entries that each count the other, so neither is ever freed.
         The wrapper owns nothing but a reference to the caller's sample, and lets go of it
         wherever the wrapper's last owner does, which the slot guarantees is this thread.
@@ -37,7 +37,7 @@ void CartEngine::unload (int cartId)
 
     auto& cart = carts[(size_t) cartId];
     cart.length.store (0);
-    cart.slot.unload();   // publish (nullptr) alone would free nothing - see SampleSlot.h
+    cart.slot.unload();
 }
 
 void CartEngine::pruneAll()
@@ -109,8 +109,13 @@ void CartEngine::reset()
     // Nothing drains the FIFO while no device runs, so clicks made before this device
     // opened would otherwise all fire in the first block. Draining is the consumer's
     // job and prepare()/reset() stand in for the callback, so this is race-free.
-    Command discard;
-    while (commands.pop (discard)) {}
+    // A change of layout still counts: it carries each cart's gain and loop to its new id,
+    // and the controller leaves that to this side once the command is queued.
+    Command pending;
+
+    while (commands.pop (pending))
+        if (pending.type == Command::Type::swapCarts || pending.type == Command::Type::movePage)
+            handle (pending);
 
     for (auto& voice : voices)
         retire (voice);
@@ -158,7 +163,58 @@ void CartEngine::handle (const Command& command)
             for (auto& voice : voices)
                 retire (voice);
             break;
+
+        case Command::Type::swapCarts:
+            if (isValidCart (command.cartId) && isValidCart (command.target))
+                followLayoutChange (command);
+
+            layoutChangesApplied.fetch_add (1);   // counted even if refused: the controller waits on it
+            break;
+
+        case Command::Type::movePage:
+            if (juce::isPositiveAndBelow ((int) command.cartId, MAX_PAGES)
+                && juce::isPositiveAndBelow ((int) command.target, MAX_PAGES))
+                followLayoutChange (command);
+
+            layoutChangesApplied.fetch_add (1);
+            break;
     }
+}
+
+void CartEngine::followLayoutChange (const Command& command)
+{
+    /*  Gain and loop move here, in the same step as the voices, and not from the message
+        thread: written there either before or after this command runs, there is a block in
+        which a moved voice is rendered with the gain and the loop flag of the cart that
+        used to hold its new id - up to 42 dB too loud, or a bed that stops at its end.
+    */
+    for (size_t i = 0; i < carts.size(); ++i)
+    {
+        movedGain[i] = carts[i].gain.load();
+        movedLoop[i] = carts[i].loop.load();
+    }
+
+    for (int i = 0; i < MAX_CARTS; ++i)
+    {
+        auto& cart = carts[(size_t) cartIdAfter (command, i)];
+        cart.gain.store (movedGain[(size_t) i]);
+        cart.loop.store (movedLoop[(size_t) i]);
+    }
+
+    for (auto& voice : voices)
+        if (voice.isActive() && isValidCart (voice.cartId))
+            voice.cartId = cartIdAfter (command, voice.cartId);
+
+    // Counted again rather than moved along: every voice now carries its new id, so this is
+    // right whatever the change was, and it is a bounded pass over fixed arrays.
+    voiceCount.fill (0);
+
+    for (const auto& voice : voices)
+        if (voice.isActive() && isValidCart (voice.cartId))
+            ++voiceCount[(size_t) voice.cartId];
+
+    for (size_t i = 0; i < carts.size(); ++i)
+        carts[i].playing.store (voiceCount[i] > 0);
 }
 
 void CartEngine::startVoice (int cartId, bool ignoreLoop)

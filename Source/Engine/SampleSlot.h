@@ -36,12 +36,13 @@ namespace flowermachine
     audio is already catastrophically stalled. Assumes shared_ptr refcount ops are
     atomic & wait-free on the target runtimes (MSVC / libstdc++, x86/ARM).
 
-    unload() exists because only the visible page is kept in memory, so a slot has to
-    be able to give its audio back. publish(nullptr) will not do it: it writes the NEXT
-    slot and leaves the previously live one still owning the decoded audio until the
-    ring wraps 16 publishes later. unload() releases the whole ring instead, deferred
-    by RELEASE_DELAY_MS so the slots are only cleared long after they stopped being
-    reachable through liveIndex.
+    Every publish also lets go of what it replaced. Writing the NEXT slot leaves the
+    previously live one still owning its audio, and left alone it would stay there until
+    the ring wrapped 16 publishes later - so a pad loaded again, pointed at another file
+    or moved to another cell would hold a stale copy for as long as its page stayed on
+    screen. Instead the rest of the ring is released by a later prune(), deferred by
+    RELEASE_DELAY_MS so a slot is only cleared long after it stopped being reachable
+    through liveIndex. unload() is a publish of nothing: the cart gives its memory back.
 */
 class SampleSlot
 {
@@ -62,12 +63,12 @@ public:
         liveIndex.store (writeIndex, std::memory_order_release);
         nextIndex = (writeIndex + 1) % numSlots;
 
-        // A slot stops being live only here. Pushing a pending release a full delay past this
-        // moment keeps the promise unload() makes - nothing is cleared until it has been out of
-        // acquire()'s reach for RELEASE_DELAY_MS - even when the cart is published again, and
-        // unloaded again, before the earlier release has run.
-        if (releasePending)
-            releaseAt = juce::Time::getMillisecondCounter() + RELEASE_DELAY_MS;
+        // The slot that was live until now is released along with the rest of the ring, a full
+        // delay from this moment: nothing is cleared until it has been out of acquire()'s reach
+        // for RELEASE_DELAY_MS, and a cart published again before then pushes the release out
+        // again rather than having its last-but-one slot cleared early.
+        releaseAt = juce::Time::getMillisecondCounter() + RELEASE_DELAY_MS;
+        releasePending = true;
 
         prune();
     }
@@ -83,15 +84,16 @@ public:
     void unload()
     {
         publish (nullptr);
-        releaseAt = juce::Time::getMillisecondCounter() + RELEASE_DELAY_MS;
-        releasePending = true;
     }
 
     /** Message thread: free retired samples no voice references anymore, and complete
-        any unload whose delay has elapsed. Called on the controller's 1 s timer. */
+        any release whose delay has elapsed. Called on every tick of the controller's timer,
+        so a page that has been left is freed as soon as its delay is up. */
     void prune()
     {
-        if (releasePending && juce::Time::getMillisecondCounter() >= releaseAt)
+        // Compared as a signed difference: the millisecond counter wraps every 49.7 days, and a
+        // plain comparison across the wrap would clear a slot at once or not for weeks.
+        if (releasePending && (juce::int32) (juce::Time::getMillisecondCounter() - releaseAt) >= 0)
         {
             releasePending = false;
 

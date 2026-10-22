@@ -52,14 +52,6 @@ namespace flowermachine
     inline constexpr double TEST_TONE_SECONDS = 0.3;
     inline constexpr float  TEST_TONE_DB      = -12.0f;
 
-    // Decoded audio of long files that had to be resampled is kept after its page is hidden, so
-    // going back to the page does not resample it again. Measured in seconds because that is what
-    // every pad shows. Set above the length of ordinary jingles and stings, so the budget goes to
-    // music beds and other long pieces. The total is capped, because the machine is doing other
-    // work too.
-    inline constexpr double HIDDEN_CACHE_MIN_SECONDS = 30.0;
-    inline constexpr int    HIDDEN_CACHE_BUDGET_MB   = 256;
-
     // Decode threads, at most. A busy machine keeps its other cores, and the pool runs at low
     // priority as well, so what it does take it gives way on.
     inline constexpr int MAX_LOADER_THREADS = 6;

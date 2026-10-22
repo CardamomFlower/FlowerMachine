@@ -11,6 +11,9 @@ namespace flowermachine
 
 namespace
 {
+    // Marks a drag as one of this grid's pads, and which cell it left.
+    constexpr const char* padDragPrefix = "flowermachine-pad:";
+
     /*  Colours the operator has mixed, kept in the settings file so a custom band can be put on
         a second pad without writing its hex down. The five fixed presets are not recorded: they
         are always on screen, and spending a remembered slot on one wastes it.
@@ -291,6 +294,20 @@ void CartButton::setCartId (int newCartId)
     refresh();
 }
 
+void CartButton::setEditMode (bool shouldEdit)
+{
+    editMode = shouldEdit;
+    updateCursor();
+}
+
+void CartButton::updateCursor()
+{
+    // The hand says "this one can be picked up" - only while editing, and only on a pad that
+    // holds something to move.
+    setMouseCursor (editMode && state != CartState::empty ? juce::MouseCursor::DraggingHandCursor
+                                                          : juce::MouseCursor::NormalCursor);
+}
+
 void CartButton::refresh()
 {
     const auto& status = controller.getStatus (cartId);
@@ -339,7 +356,9 @@ void CartButton::refresh()
     if (! changed)
         return;
 
-    if (state != status.state)
+    const bool stateChanged = state != status.state;
+
+    if (stateChanged)
     {
         const bool showControls = status.state == CartState::ready;
         stopButton.setVisible (showControls);
@@ -366,6 +385,10 @@ void CartButton::refresh()
     queuePosition = nowQueued;
     timeText = newTime;
     progress = newProgress;
+
+    if (stateChanged)
+        updateCursor();
+
     repaint();
 }
 
@@ -413,8 +436,37 @@ void CartButton::mouseDown (const juce::MouseEvent& e)
         return;
     }
 
-    if (e.mods.isLeftButtonDown() && playArea().contains (e.getPosition()))
+    // While the layout is being edited a press only picks the pad up; mouseDrag does the rest.
+    if (e.mods.isLeftButtonDown() && playArea().contains (e.getPosition()) && ! editMode)
         controller.trigger (cartId);
+}
+
+void CartButton::mouseDrag (const juce::MouseEvent& e)
+{
+    // Not on the first pixel of movement: a press that wobbles is not a drag.
+    if (! editMode || state == CartState::empty || ! e.mods.isLeftButtonDown()
+        || ! e.mouseWasDraggedSinceMouseDown() || ! playArea().contains (e.getMouseDownPosition()))
+        return;
+
+    if (auto* container = juce::DragAndDropContainer::findParentDragContainerFor (this))
+        if (! container->isDragAndDropActive())
+            container->startDragging (dragDescription (cell), this);
+}
+
+juce::var CartButton::dragDescription (int cellIndex)
+{
+    return juce::String (padDragPrefix) + juce::String (cellIndex);
+}
+
+int CartButton::draggedCell (const juce::var& description)
+{
+    const auto text = description.toString();
+
+    if (! text.startsWith (padDragPrefix))
+        return -1;
+
+    const int cellIndex = text.fromFirstOccurrenceOf (padDragPrefix, false, false).getIntValue();
+    return juce::isPositiveAndBelow (cellIndex, CARTS_PER_PAGE) ? cellIndex : -1;
 }
 
 void CartButton::mouseDoubleClick (const juce::MouseEvent& e)
@@ -447,8 +499,9 @@ void CartButton::showMenu()
 
     juce::PopupMenu menu;
     // Without a device the run would light its whole queue over silence, so it is offered
-    // greyed out rather than as a button that does nothing.
-    const bool canSequence = ready && controller.canPlay();
+    // greyed out rather than as a button that does nothing. Nor while the layout is being
+    // edited, when nothing on the board is meant to play.
+    const bool canSequence = ready && controller.canPlay() && ! editMode;
 
     menu.addItem (6, "Play row from here", canSequence);
     menu.addItem (7, "Play column from here", canSequence);

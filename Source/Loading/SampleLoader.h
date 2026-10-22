@@ -13,9 +13,10 @@
 namespace flowermachine
 {
     /*  Decodes cart files on a thread pool: read the
-        whole file, keep the first two channels, resample to the device rate, build
-        a SampleData. Results reach `onResult` on the message thread; a newer
-        request for the same cart supersedes an older one, whose result is dropped.
+        whole file (an MP3 without the silence its encoder added at the ends), keep the
+        first two channels, resample to the device rate, build a SampleData. Results
+        reach `onResult` on the message thread; a newer request for the same cart
+        supersedes an older one, whose result is dropped.
 
         Cancellation is shared with the jobs, not private to the loader: a job that is
         already queued or already running checks the cart's generation as it goes and

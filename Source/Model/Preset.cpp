@@ -57,6 +57,14 @@ void Preset::removePage (int index)
         state.removeChild (index, nullptr);
 }
 
+void Preset::movePage (int from, int to)
+{
+    const int numPages = getNumPages();
+
+    if (from != to && juce::isPositiveAndBelow (from, numPages) && juce::isPositiveAndBelow (to, numPages))
+        state.moveChild (from, to, nullptr);
+}
+
 int Preset::pageIndexOf (const juce::ValueTree& page) const
 {
     return state.indexOf (page);
@@ -95,6 +103,24 @@ void Preset::removeCart (int page, int cell)
 
     if (pageTree.isValid() && cart.isValid())
         pageTree.removeChild (cart, nullptr);
+}
+
+void Preset::moveCart (int page, int fromCell, int toCell)
+{
+    if (fromCell == toCell || ! juce::isPositiveAndBelow (toCell, CARTS_PER_PAGE))
+        return;
+
+    // Both looked up before either moves: once the first has its new cell, two carts claim it.
+    auto moving = getCart (page, fromCell);
+    auto displaced = getCart (page, toCell);
+
+    if (! moving.isValid())
+        return;
+
+    moving.setProperty (ids::cell, toCell, nullptr);
+
+    if (displaced.isValid())
+        displaced.setProperty (ids::cell, fromCell, nullptr);
 }
 
 int Preset::cellOf (const juce::ValueTree& cart)

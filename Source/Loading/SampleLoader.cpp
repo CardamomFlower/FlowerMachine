@@ -1,6 +1,7 @@
 #include "SampleLoader.h"
 
-#include <cmath>
+#include "Mp3Layout.h"
+#include "Resampler.h"
 
 namespace flowermachine
 {
@@ -10,10 +11,6 @@ namespace
     // Frames handled between two cancellation checks. Small enough that quitting or
     // switching page is immediate, large enough to cost nothing.
     constexpr int CHUNK_FRAMES = 1 << 15;
-
-    // Silence after the source, so the resampler can read past the end while it flushes
-    // its own latency. WindowedSinc looks 100 input samples ahead.
-    constexpr int RESAMPLE_PADDING = 256;
 }
 
 //==============================================================================
@@ -57,18 +54,49 @@ private:
         return shouldExit() || (*generations)[(size_t) cartId].load() != generation;
     }
 
-    /** Reads the whole file in chunks, checking for cancellation between them. */
-    bool readAll (juce::AudioFormatReader& reader, juce::AudioBuffer<float>& destination,
-                  int numChannels, int numFrames) const
+    /*  Hands out the frames of the file that are its audio, in order, starting at `skip`
+        frames into what the reader decodes. The frames before that are read and thrown away
+        rather than jumped over: an MP3 reader seeks by counting frames of 1152 samples, which
+        lands in the wrong place on a stream whose frames carry 576.
+    */
+    struct SequentialSource
+    {
+        juce::AudioFormatReader& reader;
+        juce::int64 position = 0;
+        bool stereo = false;
+
+        bool skipTo (juce::int64 skip, int numChannels)
+        {
+            if (skip <= position)
+                return true;
+
+            juce::AudioBuffer<float> discard (numChannels, (int) juce::jmin ((juce::int64) CHUNK_FRAMES, skip - position));
+
+            while (position < skip)
+                if (! read (discard, 0, (int) juce::jmin ((juce::int64) discard.getNumSamples(), skip - position)))
+                    return false;
+
+            return true;
+        }
+
+        bool read (juce::AudioBuffer<float>& destination, int startFrame, int numFrames)
+        {
+            const bool ok = reader.read (&destination, startFrame, numFrames, position, true, stereo);
+            position += numFrames;
+            return ok;
+        }
+    };
+
+    /** Reads `numFrames` frames from `source` into `destination` in chunks, checking for
+        cancellation between them. */
+    bool readAll (SequentialSource& source, juce::AudioBuffer<float>& destination, int numFrames) const
     {
         for (int start = 0; start < numFrames; start += CHUNK_FRAMES)
         {
             if (cancelled())
                 return false;
 
-            const int frames = juce::jmin (CHUNK_FRAMES, numFrames - start);
-
-            if (! reader.read (&destination, start, frames, start, true, numChannels > 1))
+            if (! source.read (destination, start, juce::jmin (CHUNK_FRAMES, numFrames - start)))
                 return false;
         }
 
@@ -93,20 +121,39 @@ private:
             return nullptr;
         }
 
-        if (reader->lengthInSamples <= 0 || reader->sampleRate <= 0.0 || reader->numChannels == 0)
+        if (reader->sampleRate <= 0.0 || reader->numChannels == 0)
         {
             error = "Empty file";
             return nullptr;
         }
 
-        if (reader->lengthInSamples > (juce::int64) (reader->sampleRate * 60.0 * MAX_CART_MINUTES))
+        // Which of the decoded frames are the file's audio: all of them, except in an MP3,
+        // whose encoder delay and padding are measured and left out so a loop has no gap.
+        juce::int64 skipFrames = 0;
+        juce::int64 sourceFrames = reader->lengthInSamples;
+
+        if (reader->getFormatName() == juce::MP3AudioFormat().getFormatName())
+        {
+            if (const auto layout = Mp3Layout::read (file))
+            {
+                skipFrames = layout->firstSample;
+                sourceFrames = layout->numSamples;
+            }
+        }
+
+        if (sourceFrames <= 0)
+        {
+            error = "Empty file";
+            return nullptr;
+        }
+
+        if (sourceFrames > (juce::int64) (reader->sampleRate * 60.0 * MAX_CART_MINUTES))
         {
             error = "Longer than " + juce::String (MAX_CART_MINUTES) + " minutes";
             return nullptr;
         }
 
         const int numChannels = juce::jmin (MAX_CHANNELS, (int) reader->numChannels);
-        const int sourceFrames = (int) reader->lengthInSamples;
         const double sourceRate = reader->sampleRate;
 
         auto data = std::make_shared<SampleData>();
@@ -116,13 +163,21 @@ private:
         data->sourceSize = fileSize;
         data->sourceSampleRate = sourceRate;
         data->sourceChannels = (int) reader->numChannels;
-        data->durationSeconds = sourceFrames / sourceRate;
+        data->durationSeconds = (double) sourceFrames / sourceRate;
+
+        SequentialSource source { *reader, 0, numChannels > 1 };
+
+        if (! source.skipTo (skipFrames, numChannels))
+        {
+            error = "Read failed";
+            return nullptr;
+        }
 
         if (juce::approximatelyEqual (sourceRate, targetRate))
         {
-            data->audio.setSize (numChannels, sourceFrames);
+            data->audio.setSize (numChannels, (int) sourceFrames);
 
-            if (! readAll (*reader, data->audio, numChannels, sourceFrames))
+            if (! readAll (source, data->audio, (int) sourceFrames))
             {
                 error = "Read failed";
                 return nullptr;
@@ -132,53 +187,32 @@ private:
             return data;
         }
 
-        // Offline resampling: quality over speed.
-        juce::AudioBuffer<float> native (numChannels, sourceFrames + RESAMPLE_PADDING);
-        native.clear();
+        const Resampler resampler (sourceRate, targetRate);
+        const auto outFrames = resampler.outputLength (sourceFrames);
 
-        if (! readAll (*reader, native, numChannels, sourceFrames))
+        // A file of a frame or two, converted down to a much lower rate, rounds to nothing.
+        if (outFrames <= 0)
         {
-            error = "Read failed";
+            error = "Empty file";
             return nullptr;
         }
 
-        const double ratio = sourceRate / targetRate;
-        const int outFrames = juce::jmax (1, (int) std::floor (sourceFrames / ratio));
+        data->audio.setSize (numChannels, (int) outFrames);
 
-        // The interpolator's output is delayed by its algorithmic latency, and its history
-        // starts zeroed: without compensation every decoded file begins with a fade-up out
-        // of silence and ends early, so a loop point is a hole rather than a seam.
-        const int latencyOut = (int) std::ceil (juce::WindowedSincInterpolator::getBaseLatency() / ratio);
-        const int scratchFrames = outFrames + latencyOut;
-
-        juce::AudioBuffer<float> scratch (numChannels, scratchFrames);
-
-        for (int ch = 0; ch < numChannels; ++ch)
+        const auto pull = [&source] (juce::AudioBuffer<float>& destination, int startFrame, int numFrames)
         {
-            juce::WindowedSincInterpolator interpolator;
-            interpolator.reset();
+            return source.read (destination, startFrame, numFrames);
+        };
 
-            int inputUsed = 0;
+        if (! resampler.process (pull, sourceFrames, data->audio, [this] { return cancelled(); }))
+        {
+            if (! cancelled())
+                error = "Read failed";
 
-            for (int produced = 0; produced < scratchFrames; produced += CHUNK_FRAMES)
-            {
-                if (cancelled())
-                    return nullptr;
-
-                const int frames = juce::jmin (CHUNK_FRAMES, scratchFrames - produced);
-                inputUsed += interpolator.process (ratio,
-                                                   native.getReadPointer (ch) + inputUsed,
-                                                   scratch.getWritePointer (ch) + produced,
-                                                   frames);
-            }
+            return nullptr;
         }
 
-        data->audio.setSize (numChannels, outFrames);
-
-        for (int ch = 0; ch < numChannels; ++ch)
-            data->audio.copyFrom (ch, 0, scratch, ch, latencyOut, outFrames);
-
-        data->lengthFrames = outFrames;
+        data->lengthFrames = data->audio.getNumSamples();
         return data;
     }
 

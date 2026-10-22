@@ -10,10 +10,13 @@ namespace flowermachine
 {
     /*  The 8x8 grid of the visible page. Cells fill the
         area; a timer at UI_REFRESH_HZ polls every cart for changes; audio files
-        dragged from Explorer onto a cell are assigned to it.
+        dragged from Explorer onto a cell are assigned to it. While the layout is being
+        edited, a pad dragged onto another cell moves there, trading places with any pad
+        already in it.
     */
     class CartGrid : public juce::Component,
                      public juce::FileDragAndDropTarget,
+                     public juce::DragAndDropTarget,
                      private juce::Timer
     {
     public:
@@ -22,6 +25,7 @@ namespace flowermachine
 
         void setPage (int page);
         int getPage() const noexcept { return page; }
+        void setEditMode (bool shouldEdit);
 
         void resized() override;
         void paintOverChildren (juce::Graphics&) override;
@@ -32,7 +36,14 @@ namespace flowermachine
         void fileDragExit (const juce::StringArray& files) override;
         void filesDropped (const juce::StringArray& files, int x, int y) override;
 
+        bool isInterestedInDragSource (const SourceDetails&) override;
+        void itemDragEnter (const SourceDetails&) override;
+        void itemDragMove (const SourceDetails&) override;
+        void itemDragExit (const SourceDetails&) override;
+        void itemDropped (const SourceDetails&) override;
+
     private:
+        void showDropTarget (const SourceDetails&);
         void timerCallback() override;
         int cellAt (int x, int y) const;
         void setHoverCell (int cellIndex);

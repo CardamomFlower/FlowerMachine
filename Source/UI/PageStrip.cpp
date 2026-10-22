@@ -1,6 +1,7 @@
 #include "PageStrip.h"
 
 #include "../Constants.h"
+#include "Palette.h"
 
 namespace flowermachine
 {
@@ -10,6 +11,14 @@ namespace
     // Pixels per wheel notch. One Windows notch reports a deltaY of about 0.23, so this is
     // roughly a third of a tab: enough to feel like scrolling, small enough to aim with.
     constexpr float wheelPixelsPerUnit = 200.0f;
+
+    // Marks a drag as one of this strip's tabs, and which page it carries.
+    constexpr const char* pageDragPrefix = "flowermachine-page:";
+
+    // A tab dragged this close to either end of the strip scrolls it a tab at a time, at this
+    // pace: slow enough to stop on the page wanted, quick enough to cross sixteen.
+    constexpr int autoScrollZone = 28;
+    constexpr int autoScrollIntervalMs = 350;
 
     /*  TabbedButtonBar hands each button an overlap so the pills it draws can sit on top of one
         another without stealing each other's clicks. That value is set only by the base class's
@@ -24,6 +33,24 @@ namespace
 
         void setOverlap (int pixels) { overlapPixels = pixels; }
 
+        // While the layout is being edited a tab can be picked up and dropped elsewhere on the
+        // strip. Selecting a page is a click, which the base class completes on release, so a
+        // drag that ends away from the tab selects nothing.
+        void mouseDrag (const juce::MouseEvent& e) override
+        {
+            juce::TabBarButton::mouseDrag (e);
+
+            const auto* strip = dynamic_cast<const PageStrip*> (&owner);
+
+            if (strip == nullptr || ! strip->isEditMode() || ! e.mods.isLeftButtonDown()
+                || ! e.mouseWasDraggedSinceMouseDown())
+                return;
+
+            if (auto* container = juce::DragAndDropContainer::findParentDragContainerFor (this))
+                if (! container->isDragAndDropActive())
+                    container->startDragging (PageStrip::dragDescription (getIndex()), this);
+        }
+
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PageTabButton)
     };
 }
@@ -34,6 +61,32 @@ PageStrip::PageStrip()
 {
 }
 
+PageStrip::~PageStrip()
+{
+    stopTimer();
+}
+
+void PageStrip::setEditMode (bool shouldEdit)
+{
+    editMode = shouldEdit;
+}
+
+juce::var PageStrip::dragDescription (int page)
+{
+    return juce::String (pageDragPrefix) + juce::String (page);
+}
+
+int PageStrip::draggedPage (const juce::var& description)
+{
+    const auto text = description.toString();
+
+    if (! text.startsWith (pageDragPrefix))
+        return -1;
+
+    const int page = text.fromFirstOccurrenceOf (pageDragPrefix, false, false).getIntValue();
+    return juce::isPositiveAndBelow (page, MAX_PAGES) ? page : -1;
+}
+
 juce::TabBarButton* PageStrip::createTabButton (const juce::String& name, int)
 {
     return new PageTabButton (name, *this);
@@ -41,6 +94,12 @@ juce::TabBarButton* PageStrip::createTabButton (const juce::String& name, int)
 
 void PageStrip::setPages (const juce::StringArray& names, int current)
 {
+    // The tabs are about to be replaced, a dragged one with them. A drag whose source has gone
+    // ends without telling the strip, so its state is let go of here.
+    stopTimer();
+    draggingPage = -1;
+    insertionIndex = -1;
+
     rebuilding = true;
 
     clearTabs();
@@ -225,6 +284,132 @@ void PageStrip::mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelD
     // that is what the operator means by "along".
     const float delta = wheel.deltaX != 0.0f ? -wheel.deltaX : wheel.deltaY;
     setScrollOffset (scrollOffset - juce::roundToInt (delta * wheelPixelsPerUnit));
+}
+
+//==============================================================================
+bool PageStrip::isInterestedInDragSource (const SourceDetails& details)
+{
+    // Only this strip's own tabs: the description alone could have come from anywhere.
+    const auto* source = details.sourceComponent.get();
+    return editMode && source != nullptr && source->getParentComponent() == this
+        && juce::isPositiveAndBelow (draggedPage (details.description), getNumTabs());
+}
+
+void PageStrip::itemDragEnter (const SourceDetails& details)
+{
+    draggingPage = draggedPage (details.description);
+    setInsertionIndex (insertionIndexAt (details.localPosition.x));
+    startTimer (autoScrollIntervalMs);
+}
+
+void PageStrip::itemDragMove (const SourceDetails& details)
+{
+    setInsertionIndex (insertionIndexAt (details.localPosition.x));
+}
+
+void PageStrip::itemDragExit (const SourceDetails&)
+{
+    stopTimer();
+    draggingPage = -1;
+    setInsertionIndex (-1);
+}
+
+void PageStrip::itemDropped (const SourceDetails& details)
+{
+    stopTimer();
+
+    const int from = draggedPage (details.description);
+    const int gap = insertionIndexAt (details.localPosition.x);
+
+    draggingPage = -1;
+    setInsertionIndex (-1);
+
+    // The gaps are counted with the dragged tab still in the strip, and it leaves its own
+    // place when it moves, so a gap to its right is one index nearer the start.
+    const int to = gap > from ? gap - 1 : gap;
+
+    if (from < 0 || to == from || onPageMoved == nullptr)
+        return;
+
+    // Not from in here: moving a page rebuilds every tab, the dragged one among them, and this
+    // runs inside the mouse release that ends the drag.
+    juce::MessageManager::callAsync ([safe = juce::Component::SafePointer<PageStrip> (this), from, to]
+    {
+        if (safe != nullptr && safe->onPageMoved != nullptr)
+            safe->onPageMoved (from, to);
+    });
+}
+
+int PageStrip::insertionIndexAt (int x) const
+{
+    for (int i = 0; i < getNumTabs(); ++i)
+        if (auto* tab = getTabButton (i); tab != nullptr && x < tab->getBounds().getCentreX())
+            return i;
+
+    return getNumTabs();
+}
+
+void PageStrip::setInsertionIndex (int index)
+{
+    // Either side of the dragged tab is where it already is: nothing to mark.
+    if (draggingPage >= 0 && (index == draggingPage || index == draggingPage + 1))
+        index = -1;
+
+    if (index != insertionIndex)
+    {
+        insertionIndex = index;
+        repaint();
+    }
+}
+
+void PageStrip::paintOverChildren (juce::Graphics& g)
+{
+    if (insertionIndex < 0 || getNumTabs() == 0)
+        return;
+
+    // Halfway between the pill before the gap and the pill after it; at either end, the edge
+    // of the one pill there is.
+    const auto pillLeft  = [this] (int i) { auto* t = getTabButton (i); return t->getX() + t->getActiveArea().getX(); };
+    const auto pillRight = [this] (int i) { auto* t = getTabButton (i); return t->getX() + t->getActiveArea().getRight(); };
+
+    int x = 0;
+
+    if (insertionIndex == 0)
+        x = pillLeft (0);
+    else if (insertionIndex >= getNumTabs())
+        x = pillRight (getNumTabs() - 1);
+    else
+        x = (pillRight (insertionIndex - 1) + pillLeft (insertionIndex)) / 2;
+
+    constexpr float barWidth = 3.0f;
+    const float centre = juce::jlimit (barWidth * 0.5f, (float) getWidth() - barWidth * 0.5f, (float) x);
+
+    g.setColour (palette::accent);
+    g.fillRoundedRectangle (centre - barWidth * 0.5f, 3.0f, barWidth, (float) getHeight() - 6.0f, barWidth * 0.5f);
+}
+
+void PageStrip::timerCallback()
+{
+    // A pointer held still at the end of the strip sends no drag moves, so the scrolling has to
+    // come from here.
+    const auto* container = juce::DragAndDropContainer::findParentDragContainerFor (this);
+
+    if (draggingPage < 0 || container == nullptr || ! container->isDragAndDropActive())
+    {
+        stopTimer();
+        return;
+    }
+
+    const int x = getMouseXYRelative().x;
+
+    if (x < autoScrollZone && canScrollLeft())
+        scrollByTabs (-1);
+    else if (x > getWidth() - autoScrollZone && canScrollRight())
+        scrollByTabs (1);
+    else
+        return;
+
+    setInsertionIndex (insertionIndexAt (x));
 }
 
 //==============================================================================

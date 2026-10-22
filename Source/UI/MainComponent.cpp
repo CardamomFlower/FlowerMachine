@@ -51,6 +51,10 @@ MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineTo
     presetLabel.setJustificationType (juce::Justification::centredLeft);
     presetLabel.setBorderSize (juce::BorderSize<int> (0));
 
+    addAndMakeVisible (editButton);
+    editButton.setClickingTogglesState (true);
+    editButton.onClick = [this] { setEditMode (editButton.getToggleState()); };
+
     addAndMakeVisible (settingsButton);
     settingsButton.onClick = [this] { SettingsComponent::show (this, engine, settings); };
 
@@ -62,6 +66,7 @@ MainComponent::MainComponent (Controller& controllerToUse, AudioEngine& engineTo
     pageStrip.onRenameRequested = [this] (int page) { renamePage (page); };
     pageStrip.onRemoveRequested = [this] (int page) { removePage (page); };
     pageStrip.onFillRequested = [this] (int page) { fillPage (page); };
+    pageStrip.onPageMoved = [this] (int from, int to) { controller.movePage (from, to); };
 
     /*  Shown only when the pages do not fit. With the usual three or four they are not there at
         all and the strip looks exactly as it did; past that they are the way along it, and every
@@ -190,6 +195,8 @@ void MainComponent::resized()
     bar.removeFromRight (rowGap);
     settingsButton.setBounds (bar.removeFromRight (112).withSizeKeepingCentre (112, 32));
     bar.removeFromRight (rowGap);
+    editButton.setBounds (bar.removeFromRight (112).withSizeKeepingCentre (112, 32));
+    bar.removeFromRight (rowGap);
     fileButton.setBounds (bar.removeFromLeft (72).withSizeKeepingCentre (72, 32));
     bar.removeFromLeft (rowGap + 4);
     presetLabel.setBounds (bar.withSizeKeepingCentre (bar.getWidth(), 32));
@@ -245,6 +252,15 @@ bool MainComponent::handleShortcut (const juce::KeyPress& key)
     if (key == juce::KeyPress ('n', command, 0)) { newPreset();         return true; }
 
     return false;
+}
+
+void MainComponent::dragOperationEnded (const juce::DragAndDropTarget::SourceDetails&)
+{
+    // While a pad or a tab is being dragged the drag image has the keyboard, and it takes Esc
+    // to mean "cancel the drag" - so Esc would no longer stop anything. It ends the drag from
+    // inside that key press, with the key still down: that is when STOP ALL is honoured too.
+    if (juce::KeyPress::isKeyCurrentlyDown (juce::KeyPress::escapeKey))
+        controller.stopAll();
 }
 
 //==============================================================================
@@ -460,6 +476,18 @@ void MainComponent::rememberPreset (const juce::File& file)
 }
 
 //==============================================================================
+void MainComponent::setEditMode (bool shouldEdit)
+{
+    // A running row or column would go on starting pads while the board says none play, and
+    // its next step could be queued just as a pad is moved. What is already sounding carries on.
+    if (shouldEdit)
+        controller.cancelSequence();
+
+    grid.setEditMode (shouldEdit);
+    pageStrip.setEditMode (shouldEdit);
+    updateStatus();
+}
+
 void MainComponent::addPage()
 {
     if (! controller.addPage ("Page " + juce::String (controller.getNumPages() + 1)))
@@ -545,6 +573,15 @@ void MainComponent::refreshTitle()
 
 void MainComponent::updateStatus()
 {
+    // Said where the operator looks for the state of things, because a pad that does not play
+    // is the one thing a show cannot have by surprise.
+    if (editButton.getToggleState())
+    {
+        statusLabel.setText ("Edit layout: drag a pad or a page tab to move it. Pads do not play until Edit layout is switched off.",
+                             juce::dontSendNotification);
+        return;
+    }
+
     const auto counts = controller.countStates (controller.getVisiblePage());
 
     juce::String s = engine.getDeviceDescription();

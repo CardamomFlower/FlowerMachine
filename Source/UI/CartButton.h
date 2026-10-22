@@ -109,6 +109,10 @@ namespace flowermachine
         /** page * CARTS_PER_PAGE + cell; set by the grid when the visible page changes. */
         void setCartId (int newCartId);
 
+        /** Edit layout: the play area no longer plays, it picks the pad up to be dragged to
+            another cell. Stop, Loop and the knob work as always. */
+        void setEditMode (bool shouldEdit);
+
         /** Polls status and engine atomics; repaints only when something visible changed. */
         void refresh();
 
@@ -116,10 +120,17 @@ namespace flowermachine
         void resized() override;
         void lookAndFeelChanged() override;
         void mouseDown (const juce::MouseEvent&) override;
+        void mouseDrag (const juce::MouseEvent&) override;
         void mouseDoubleClick (const juce::MouseEvent&) override;
+
+        /** What a pad hands to the drag-and-drop container, and the cell it names (-1 when the
+            description is not a pad's). */
+        static juce::var dragDescription (int cell);
+        static int draggedCell (const juce::var& description);
 
     private:
         void applyPaletteColours();   // the few colours held here rather than in the LookAndFeel
+        void updateCursor();
         void showMenu();
         void chooseFile (bool relocate);
         void renameCart();
@@ -136,6 +147,7 @@ namespace flowermachine
         juce::PropertiesFile& settings;   // remembered colours only
         const int cell;
         int cartId;
+        bool editMode = false;
 
         StripButton stopButton { StripButton::Symbol::stop, "Stop" };
         StripButton loopButton { StripButton::Symbol::loop, "Loop" };
