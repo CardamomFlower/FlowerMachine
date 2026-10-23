@@ -20,7 +20,7 @@ Windows 10 or later, 64-bit.
 ## Getting it
 
 Download `FlowerMachineSetup.exe` from
-[Releases](https://github.com/CardamomFlower/Flower/releases) and run it.
+[Releases](https://github.com/CardamomFlower/FlowerMachine/releases) and run it.
 
 It installs for you alone, into `%LOCALAPPDATA%\Programs\FlowerMachine`, so it
 never asks for an administrator password. Three tick-boxes, all on to start
